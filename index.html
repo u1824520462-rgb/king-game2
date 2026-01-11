@@ -230,29 +230,45 @@ function update() {
     vx += moveDir * speedBonus; vx *= 0.88;
     let curGrav = (vy < 0 && holdingJump) ? 0.38 : 0.85;
     vy += curGrav; px += vx; py += vy;
-    if(socket && is1v1) socket.emit('move', { x: px, y: py })
+   if (socket && typeof is1v1 !== 'undefined' && is1v1 === true) {
+    socket.emit('move', { x: px, y: py });
+}
     if (px < 0) { px = 0; vx = 0; }
     
     // --- COLLISIONI ---
     onGround = false;
     document.querySelectorAll('.platform').forEach(pl => {
-      let pL = parseInt(pl.style.left), pT = parseInt(pl.style.top), pW = parseInt(pl.style.width);
-      if (vy >= 0 && px + 35 > pL && px < pL + pW && py + 58 >= pT && py + 58 <= pT + 35) { 
-        py = pT - 58; vy = 0; onGround = true; 
-      }
-    });
+    let pL = parseInt(pl.style.left), pT = parseInt(pl.style.top);
+    let pW = parseInt(pl.style.width), pH = parseInt(pl.style.height);
+
+    // Collisione solo se stai cadendo (vy >= 0) e sei sopra la piattaforma
+    if (vy >= 0 && px + 35 > pL && px < pL + pW && py + 58 >= pT && py + 58 <= pT + 15) {
+        py = pT - 58; 
+        vy = 0; 
+        onGround = true;
+    }
+});
 
     // --- TELECAMERA SISTEMATA (FLUIDA) ---
     let targetX = -px + (window.innerWidth / 2.5);
     scrollX += (targetX - scrollX) * 0.1; // Inseguimento morbido
     if(scrollX > 0) scrollX = 0;
 
-    document.getElementById('world').style.transform = `translateX(${scrollX}px)`;
+    if (py > window.innerHeight + 100) { 
+    state = 'MENU'; // <--- FERMA TUTTO IL GIOCO
+    stats.deaths++; 
+    saveData(); 
+    showScreen('end-screen'); // Mostra la schermata per riprovare
+}
     const pEl = document.getElementById('player'); pEl.style.left = px + 'px'; pEl.style.top = py + 'px';
     if(moveDir !== 0) pEl.style.transform = (moveDir > 0) ? 'scaleX(1)' : 'scaleX(-1)';
     
     // Morte per caduta
-    if(py > window.innerHeight + 100) { stats.deaths++; startPlaying(); }
+    if (py > window.innerHeight + 100) { 
+    stats.deaths++; 
+    state = 'MENU'; // Ferma il movimento del gioco
+    saveData(); 
+    showScreen('end-screen'); // Mostra la schermata "Sei Morto / Riprova"
   }
   requestAnimationFrame(update);
 }
@@ -353,6 +369,7 @@ update();
 </script>
 </body>
 </html>
+
 
 
 
