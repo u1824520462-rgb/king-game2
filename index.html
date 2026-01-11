@@ -327,13 +327,10 @@ function loadData() { const save = localStorage.getItem('king_save_v2'); if(save
 // --- LOGICA MULTIPLAYER (Ricezione) ---
 if (socket) {
     // SISTEMA IL MOVIMENTO: Riceve la posizione dell'altro
-    socket.on('enemyMove', (dati) => {
-        const p2 = document.getElementById('player2');
-        if (p2) {
-            p2.style.left = dati.x + 'px';
+    socket.on('enemyMove', (dati) => { const p2 = document.getElementById('player2');
+        if (p2) { p2.style.left = dati.x + 'px';
             p2.style.top = dati.y + 'px';
-            p2.style.display = 'block'; // Lo fa apparire
-        }
+            p2.style.display = 'block'; // Lo fa apparire}
     });
 
     // SISTEMA IL DANNO: Riceve l'attacco dell'altro
@@ -341,11 +338,10 @@ if (socket) {
         // Calcola se sei vicino a chi ha attaccato
         let dx = px - dati.x;
         let dy = py - dati.y;
-        let distanza = Math.sqrt(dx * dx + dy * dy);
+        let distanza = Math.sqrt(dx * dx + dy * dy);}
 
         // Se sei nel raggio di 70px quando lui preme il tasto
-        if (distanza < 70) {
-            health -= 1; // Toglie 1 cuore (ne hai 5)
+        if (distanza < 70) {health -= 1; // Toglie 1 cuore (ne hai 5)
             
             // Aggiorna i cuori sullo schermo
             const hUI = document.getElementById('health-ui');
@@ -369,6 +365,7 @@ update();
 </script>
 </body>
 </html>
+
 
 
 
