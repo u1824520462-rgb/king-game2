@@ -140,37 +140,7 @@
 <script>
 const socket = (typeof io !==
 'undefined') ? io() : null;
- // --- RICEZIONE MOVIMENTO ---
-PRESA.on('enemyMove', (dati) => {
-    // Aggiorna le coordinate del nemico con i dati che arrivano dal server
-    if (typeof nemico !== 'undefined') {
-        nemico.px = dati.x;
-        nemico.py = dati.y;
-    }
-});
-
-// --- RICEZIONE ATTACCO E DANNO ---
-PRESA.on('enemyAttack', () => {
-    console.log("Attacco nemico ricevuto!");
-    
-    // 1. Calcola la distanza tra te e il nemico
-    let dx = px - nemico.px;
-    let dy = py - nemico.py;
-    let distanza = Math.sqrt(dx * dx + dy * dy);
-
-    // 2. Se la distanza è minore di 60 pixel, togli la vita
-    if (distanza < 60) {
-        salute -= 10; 
-        console.log("Ti hanno colpito! Salute: " + salute);
-        
-        // Se la salute arriva a 0
-        if (salute <= 0) {
-            alert("Sei morto!");
-            location.reload(); 
-        }
-    }
-});
-  let state = 'MENU', currentLevel = 1, unlockedLevel = 1, difficulty = 1;
+ let state = 'MENU', currentLevel = 1, unlockedLevel = 1, difficulty = 1;
 let px, py, vx, vy, health, stats = { deaths: 0, bossKills: 0 };
 let onGround = false, moveDir = 0, scrollX = 0, holdingJump = false, isAttacking = false;
 let projectiles = [], bosses = [], fountain = null;
@@ -260,7 +230,7 @@ function update() {
     vx += moveDir * speedBonus; vx *= 0.88;
     let curGrav = (vy < 0 && holdingJump) ? 0.38 : 0.85;
     vy += curGrav; px += vx; py += vy;
-
+    if(socket && is1v1) socket.emit('move', { x: px, y: py })
     if (px < 0) { px = 0; vx = 0; }
     
     // --- COLLISIONI ---
@@ -290,6 +260,7 @@ function update() {
 function attack() { 
   if(isAttacking) return; 
   isAttacking = true; 
+  if (socket && is1v1) socket.emit('attack',{  x: px, y: py });
   const s = document.getElementById('sword');
   s.classList.add('sword-anim'); 
   
@@ -337,13 +308,51 @@ function updateUIStats() {
 }
 function saveData() { localStorage.setItem('king_save_v2', JSON.stringify({ unlockedLevel, stats })); }
 function loadData() { const save = localStorage.getItem('king_save_v2'); if(save) { const data = JSON.parse(save); unlockedLevel = data.unlockedLevel || 1; stats = data.stats || stats; } }
+// --- LOGICA MULTIPLAYER (Ricezione) ---
+if (socket) {
+    // SISTEMA IL MOVIMENTO: Riceve la posizione dell'altro
+    socket.on('enemyMove', (dati) => {
+        const p2 = document.getElementById('player2');
+        if (p2) {
+            p2.style.left = dati.x + 'px';
+            p2.style.top = dati.y + 'px';
+            p2.style.display = 'block'; // Lo fa apparire
+        }
+    });
 
+    // SISTEMA IL DANNO: Riceve l'attacco dell'altro
+    socket.on('enemyAttack', (dati) => {
+        // Calcola se sei vicino a chi ha attaccato
+        let dx = px - dati.x;
+        let dy = py - dati.y;
+        let distanza = Math.sqrt(dx * dx + dy * dy);
+
+        // Se sei nel raggio di 70px quando lui preme il tasto
+        if (distanza < 70) {
+            health -= 1; // Toglie 1 cuore (ne hai 5)
+            
+            // Aggiorna i cuori sullo schermo
+            const hUI = document.getElementById('health-ui');
+            if (hUI) hUI.innerText = "♥".repeat(Math.max(0, health));
+
+            // Feedback visivo: lampeggi di rosso
+            const p1 = document.getElementById('player');
+            if(p1) {
+                p1.style.filter = "brightness(2) sepia(1) hue-rotate(-50deg)";
+                setTimeout(() => { p1.style.filter = "none"; }, 150);
+            }
+
+            // Se muori
+            if (health <= 0) showScreen('end-screen');
+        }
+    });
+}
 loadData(); 
 initControls(); // Inizializza i tasti
 update();
 </script>
-
 </body>
 </html>
+
 
 
