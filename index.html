@@ -140,6 +140,36 @@
 <script>
 const socket = (typeof io !==
 'undefined') ? io() : null;
+ // --- RICEZIONE MOVIMENTO ---
+PRESA.on('enemyMove', (dati) => {
+    // Aggiorna le coordinate del nemico con i dati che arrivano dal server
+    if (typeof nemico !== 'undefined') {
+        nemico.px = dati.x;
+        nemico.py = dati.y;
+    }
+});
+
+// --- RICEZIONE ATTACCO E DANNO ---
+PRESA.on('enemyAttack', () => {
+    console.log("Attacco nemico ricevuto!");
+    
+    // 1. Calcola la distanza tra te e il nemico
+    let dx = px - nemico.px;
+    let dy = py - nemico.py;
+    let distanza = Math.sqrt(dx * dx + dy * dy);
+
+    // 2. Se la distanza è minore di 60 pixel, togli la vita
+    if (distanza < 60) {
+        salute -= 10; 
+        console.log("Ti hanno colpito! Salute: " + salute);
+        
+        // Se la salute arriva a 0
+        if (salute <= 0) {
+            alert("Sei morto!");
+            location.reload(); 
+        }
+    }
+});
   let state = 'MENU', currentLevel = 1, unlockedLevel = 1, difficulty = 1;
 let px, py, vx, vy, health, stats = { deaths: 0, bossKills: 0 };
 let onGround = false, moveDir = 0, scrollX = 0, holdingJump = false, isAttacking = false;
@@ -315,4 +345,5 @@ update();
 
 </body>
 </html>
+
 
