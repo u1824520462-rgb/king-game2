@@ -136,8 +136,11 @@
   </div>
 </div>
 
+<script src="/socket.io/socket.io.js"></script>
 <script>
-let state = 'MENU', currentLevel = 1, unlockedLevel = 1, difficulty = 1;
+const socket = (typeof io !==
+'undefined') ? io() : null;
+  let state = 'MENU', currentLevel = 1, unlockedLevel = 1, difficulty = 1;
 let px, py, vx, vy, health, stats = { deaths: 0, bossKills: 0 };
 let onGround = false, moveDir = 0, scrollX = 0, holdingJump = false, isAttacking = false;
 let projectiles = [], bosses = [], fountain = null;
@@ -309,5 +312,7 @@ loadData();
 initControls(); // Inizializza i tasti
 update();
 </script>
+
 </body>
 </html>
+
