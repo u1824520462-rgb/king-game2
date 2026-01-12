@@ -34,7 +34,7 @@
   #game-container { position: relative; width: 100%; height: 100%; display: none; overflow: hidden; }
   #world { position: absolute; top: 0; left: 0; width: 15000px; height: 100%; }
   
-  /* PUNTO 5: Colori fissi */
+  /* PUNTO 5: Colori fissi Player 1 (Viola) e Player 2 (Blu) */
   #player { position: absolute; width: 42px; height: 58px; background: #ce93d8; border-radius: 8px; border: 3px solid #f3e5f5; z-index: 10; box-shadow: 0 0 20px rgba(206, 147, 216, 0.6); }
   #player2 { position: absolute; width: 42px; height: 58px; background: #4fc3f7; border-radius: 8px; border: 3px solid #e1f5fe; z-index: 9; display: none; box-shadow: 0 0 20px rgba(79, 195, 247, 0.6); }
 
@@ -104,16 +104,17 @@
 
 <div id="stats-menu" class="overlay-screen hide">
   <h1>PROGRESSI DATI</h1>
-  <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid #7c43bd; width: 300px;">
+  <div class="stats-box" style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid #7c43bd; width: 300px; text-align:left;">
     <p>Regni Sbloccati: <span id="stat-lvls" style="color:#bb86fc">1/10</span></p>
     <p>Boss Sconfitti: <span id="stat-boss" style="color:#bb86fc">0</span></p>
+    <p>Morti Totali: <span id="stat-deaths" style="color:#bb86fc">0</span></p>
   </div>
   <button class="menu-btn" onclick="showScreen('main-menu')" style="background:#222; margin-top:10px;">INDIETRO</button>
 </div>
 
 <div id="end-screen" class="overlay-screen hide">
   <h1>SCONFITTO</h1>
-  <button class="menu-btn" onclick="retryLevel()">RIPROVA</button>
+  <button class="menu-btn" onclick="startPlaying()">RIPROVA</button>
   <button class="menu-btn" onclick="location.reload()">MENU</button>
 </div>
 
@@ -130,8 +131,8 @@
   <div class="controls">
     <div class="joystick-area" id="joyArea"><div id="knob"></div></div>
     <div class="btn-group">
-      <button class="action-btn" id="btnAtk">⚔️</button>
-      <button class="action-btn" id="btnJmp">⬆️</button>
+      <button class="action-btn" style="background:rgba(76, 175, 80, 0.6)" id="btnAtk">⚔️</button>
+      <button class="action-btn" style="background:rgba(255, 51, 102, 0.6)" id="btnJmp">⬆️</button>
     </div>
   </div>
 </div>
@@ -143,7 +144,7 @@ let px, py, vx, vy, health, stats = { deaths: 0, bossKills: 0 };
 let onGround = false, moveDir = 0, scrollX = 0, scrollY = 0, holdingJump = false, isAttacking = false;
 let projectiles = [], bosses = [], is1v1 = false, activeSkill = 'speed';
 
-// Colpi diversi per ogni boss
+// Configurazione boss con simboli diversi (Ghiaccio, Fuoco, Fulmine, Arcano)
 const bossAttackStyles = [
   { s: '❄️', v: -6, r: 2500 }, { s: '🔥', v: -8, r: 2000 }, 
   { s: '⚡', v: -10, r: 1500 }, { s: '🧿', v: -7, r: 2200 }
@@ -154,9 +155,11 @@ function initControls() {
   const btnAtk = document.getElementById('btnAtk');
   const joyArea = document.getElementById('joyArea');
   const knob = document.getElementById('knob');
+
   btnJmp.onpointerdown = () => { if(onGround) { vy = -17; onGround = false; holdingJump = true; } };
   btnJmp.onpointerup = () => { holdingJump = false; };
   btnAtk.onpointerdown = () => { attack(); };
+
   joyArea.onpointermove = (e) => {
     if(e.buttons > 0) {
       let rect = joyArea.getBoundingClientRect();
@@ -168,29 +171,19 @@ function initControls() {
   joyArea.onpointerup = () => { moveDir = 0; knob.style.left = '50%'; };
 }
 
-function selectSkill(el, skill) {
-  document.querySelectorAll('.pow-item').forEach(item => item.classList.remove('active'));
-  el.classList.add('active'); activeSkill = skill;
-}
-
-function askServerCode() {
-  let key = prompt("Chiave stanza:");
-  if(key) { socket.emit('joinRoom', key); showScreen('powerup-menu'); }
-}
-
-function start1v1() { is1v1 = true; startPlaying(); document.getElementById('player2').style.display = 'block'; }
-
 function loadLevel(n) {
   const world = document.getElementById('world');
   world.querySelectorAll('.platform, .boss, .projectile').forEach(e => e.remove());
   projectiles = [];
   const groundY = 500; 
+
   const plats = [{w:1500, h:100, l:0, t:groundY}, {w:1500, h:100, l:2500, t:groundY}, {w:1500, h:100, l:5000, t:groundY}];
   plats.forEach(p => {
     const d = document.createElement('div'); d.className = 'platform';
     d.style.width = p.w+'px'; d.style.height = p.h+'px'; d.style.left = p.l+'px'; d.style.top = p.t+'px';
     world.appendChild(d);
   });
+
   if(!is1v1) {
     bosses = [
       {id:'b1', x:3000, hp:30, dead:false, last:0, type: bossAttackStyles[n%4]},
@@ -219,6 +212,7 @@ function update() {
       }
     });
 
+    // Boss attaccano con colpi diversi
     bosses.forEach(b => {
       if(!b.dead && Date.now() - b.last > b.type.r) {
         let s = document.createElement('div'); s.className = 'projectile';
@@ -229,6 +223,7 @@ function update() {
       }
     });
 
+    // Collisione proiettili schivabili
     projectiles.forEach((p, i) => {
       p.x += p.vx; p.el.style.left = p.x + 'px';
       if (Math.abs(p.x - px) < 40 && Math.abs(p.y - py) < 60) {
@@ -237,7 +232,7 @@ function update() {
       }
     });
 
-    // TELECAMERA CENTRATA
+    // TELECAMERA CENTRATA (Fisso asse X e Y)
     let targetX = -px + (window.innerWidth / 2) - 21;
     let targetY = -py + (window.innerHeight / 2) + 100;
     scrollX += (targetX - scrollX) * 0.1;
@@ -278,11 +273,15 @@ function startPlaying() {
   showScreen('none'); loadLevel(currentLevel);
 }
 
-function newGame() { is1v1 = false; startPlaying(); }
+function newGame() { is1v1 = false; currentLevel = 1; startPlaying(); }
+function continueGame() { startPlaying(); }
+
 function showScreen(id) {
   document.querySelectorAll('.overlay-screen').forEach(s => s.classList.add('hide'));
-  if(id !== 'none') document.getElementById(id).classList.remove('hide');
-  if(id === 'level-menu') updateUIStats();
+  if(id !== 'none') {
+    document.getElementById(id).classList.remove('hide');
+    if(id === 'level-menu') updateUIStats();
+  }
 }
 
 function updateUIStats() {
@@ -291,13 +290,16 @@ function updateUIStats() {
         const b = document.createElement('button'); b.className = 'menu-btn'; b.style.width='130px'; b.innerText = "REGNO " + i;
         b.onclick = () => { currentLevel = i; startPlaying(); }; grid.appendChild(b);
     }
+    document.getElementById('stat-lvls').innerText = unlockedLevel + "/10";
+    document.getElementById('stat-boss').innerText = stats.bossKills;
+    document.getElementById('stat-deaths').innerText = stats.deaths;
 }
 
-socket.on('enemyMove', (d) => {
-  let p2 = document.getElementById('player2');
-  p2.style.left = d.x+'px'; p2.style.top = d.y+'px';
-  if(d.dir !== 0) p2.style.transform = (d.dir > 0) ? 'scaleX(1)' : 'scaleX(-1)';
-});
+function setDifficulty(d) {
+  difficulty = d;
+  document.querySelectorAll('[id^="diff-"]').forEach(btn => btn.classList.remove('active'));
+  document.getElementById('diff-'+d).classList.add('active');
+}
 
 initControls();
 update();
