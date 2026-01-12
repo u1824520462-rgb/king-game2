@@ -32,9 +32,8 @@
   .menu-btn.active { background: #00e676; border-color: white; color: black; font-weight: bold; }
 
   #game-container { position: relative; width: 100%; height: 100%; display: none; overflow: hidden; }
-  #world { position: absolute; top: 0; left: 0; width: 15000px; height: 100%; }
+  #world { position: absolute; top: 0; left: 0; width: 15000px; height: 100%; transition: transform 0.1s linear; }
   
-  /* PUNTO 5: Colori fissi Player 1 e Player 2 */
   #player { position: absolute; width: 42px; height: 58px; background: #ce93d8; border-radius: 8px; border: 3px solid #f3e5f5; z-index: 10; box-shadow: 0 0 20px rgba(206, 147, 216, 0.6); }
   #player2 { position: absolute; width: 42px; height: 58px; background: #4fc3f7; border-radius: 8px; border: 3px solid #e1f5fe; z-index: 9; display: none; box-shadow: 0 0 20px rgba(79, 195, 247, 0.6); }
 
@@ -77,18 +76,6 @@
   <button class="menu-btn" onclick="showScreen('settings-menu')">IMPOSTAZIONI</button>
 </div>
 
-<div id="powerup-menu" class="overlay-screen hide">
-  <h1>POTENZIAMENTI SFIDA</h1>
-  <div class="stats-box" style="width: 350px; text-align: center;">
-    <div class="pow-item active" onclick="selectSkill(this, 'speed')">⚡ VELOCITÀ</div>
-    <div class="pow-item" onclick="selectSkill(this, 'shield')">🛡️ SCUDO REALE</div>
-    <div class="pow-item" onclick="selectSkill(this, 'power')">🔥 COLPO ESPLOSIVO</div>
-    <div class="pow-item" onclick="selectSkill(this, 'slow')">❄️ RALLENTAMENTO</div>
-  </div>
-  <button class="menu-btn" onclick="start1v1()">INIZIA BATTAGLIA</button>
-  <button class="menu-btn" onclick="showScreen('main-menu')" style="background:#222;">INDIETRO</button>
-</div>
-
 <div id="settings-menu" class="overlay-screen hide">
   <h1>IMPOSTAZIONI</h1>
   <button class="menu-btn" id="diff-0" onclick="setDifficulty(0)">FACILE</button>
@@ -113,12 +100,6 @@
   <button class="menu-btn" onclick="showScreen('main-menu')" style="background:#222; margin-top:10px;">INDIETRO</button>
 </div>
 
-<div id="end-screen" class="overlay-screen hide">
-  <h1>SCONFITTO</h1>
-  <button class="menu-btn" onclick="startPlaying()">RIPROVA</button>
-  <button class="menu-btn" onclick="location.reload()">MENU</button>
-</div>
-
 <div id="game-container">
   <div id="ui-bar">
     <div class="ui-element">HP: <span id="health-ui">♥♥♥♥♥</span></div>
@@ -132,8 +113,8 @@
   <div class="controls">
     <div class="joystick-area" id="joyArea"><div id="knob"></div></div>
     <div class="btn-group">
-      <button class="action-btn" style="background:rgba(76, 175, 80, 0.6)" id="btnAtk">⚔️</button>
-      <button class="action-btn" style="background:rgba(255, 51, 102, 0.6)" id="btnJmp">⬆️</button>
+      <button class="action-btn" id="btnAtk">⚔️</button>
+      <button class="action-btn" id="btnJmp">⬆️</button>
     </div>
   </div>
 </div>
@@ -143,10 +124,12 @@ const socket = io();
 let state = 'MENU', currentLevel = 1, unlockedLevel = 1, difficulty = 1;
 let px, py, vx, vy, health, stats = { deaths: 0, bossKills: 0 };
 let onGround = false, moveDir = 0, scrollX = 0, scrollY = 0, holdingJump = false, isAttacking = false;
-let projectiles = [], bosses = [], is1v1 = false, activeSkill = 'speed';
+let projectiles = [], bosses = [], is1v1 = false;
 
-// PUNTO: Ogni boss ha un colpo diverso da schivare
-const bossAtkStyles = [
+const weaponData = [{n:"Spada",icon:"⚔️"},{n:"Ascia",icon:"🪓"},{n:"Lancia",icon:"🔱"},{n:"Martello",icon:"🔨"},{n:"Arco",icon:"🏹"},{n:"Magia",icon:"🪄"},{n:"Daga",icon:"🗡️"},{n:"Shuriken",icon:"🎯"},{n:"Fustigatore",icon:"⛓️"},{n:"Scettro Reale",icon:"👑"}];
+
+// Configurazione boss (uno per ogni regno)
+const bossStyles = [
   { sym: '❄️', speed: -6, rate: 2500 }, { sym: '🔥', speed: -8, rate: 2000 }, 
   { sym: '⚡', speed: -10, rate: 1500 }, { sym: '🧿', speed: -7, rate: 2200 }
 ];
@@ -178,8 +161,12 @@ function loadLevel(n) {
   projectiles = [];
   const groundY = 500; 
 
-  // Piattaforme (come nel tuo codice)
-  const plats = [{w:1500, h:100, l:0, t:groundY}, {w:1500, h:100, l:2500, t:groundY}, {w:1500, h:100, l:5000, t:groundY}];
+  // Piattaforme classiche del tuo gioco
+  const plats = [
+    {w:2000, h:100, l:0, t:groundY}, 
+    {w:1000, h:100, l:2500, t:groundY-100}, 
+    {w:2000, h:100, l:4000, t:groundY}
+  ];
   plats.forEach(p => {
     const d = document.createElement('div'); d.className = 'platform';
     d.style.width = p.w+'px'; d.style.height = p.h+'px'; d.style.left = p.l+'px'; d.style.top = p.t+'px';
@@ -188,16 +175,15 @@ function loadLevel(n) {
 
   if(!is1v1) {
     bosses = [
-      {id:'b1', x:3000, hp:30, dead:false, last:0, type: bossAtkStyles[n%4]},
-      {id:'b2', x:6000, hp:40, dead:false, last:0, type: bossAtkStyles[(n+1)%4]}
+      {id:'b1', x:3200, hp:30, dead:false, last:0, type: bossStyles[n%4]}
     ];
     bosses.forEach(b => {
       const el = document.createElement('div'); el.id = b.id; el.className = 'boss';
-      el.style.left = b.x+'px'; el.style.top = (groundY - 140)+'px'; el.innerHTML = '👾';
+      el.style.left = b.x+'px'; el.style.top = (groundY - 240)+'px'; el.innerHTML = (n === 10 ? '👑' : '👾');
       world.appendChild(el);
     });
   }
-  px = 150; py = groundY - 60;
+  px = 150; py = groundY - 60; vx = 0; vy = 0;
 }
 
 function update() {
@@ -205,6 +191,8 @@ function update() {
     vx += moveDir * 1.5; vx *= 0.88;
     vy += (vy < 0 && holdingJump) ? 0.38 : 0.85;
     px += vx; py += vy;
+
+    if(px < 0) px = 0;
 
     onGround = false;
     document.querySelectorAll('.platform').forEach(pl => {
@@ -214,39 +202,33 @@ function update() {
       }
     });
 
-    // Attacchi Boss
+    // Boss logica attacco
     bosses.forEach(b => {
       if(!b.dead && Date.now() - b.last > b.type.rate) {
         let s = document.createElement('div'); s.className = 'projectile';
-        s.innerHTML = b.type.sym; s.style.left = b.x + 'px'; s.style.top = '450px';
+        s.innerHTML = b.type.sym; s.style.left = b.x + 'px'; s.style.top = (parseInt(document.getElementById(b.id).style.top) + 50) + 'px';
         document.getElementById('world').appendChild(s);
-        projectiles.push({el: s, x: b.x, y: 450, vx: b.type.speed});
+        projectiles.push({el: s, x: b.x, y: parseInt(s.style.top), vx: b.type.speed});
         b.last = Date.now();
       }
     });
 
-    // Collisione colpi
     projectiles.forEach((p, i) => {
       p.x += p.vx; p.el.style.left = p.x + 'px';
       if (Math.abs(p.x - px) < 40 && Math.abs(p.y - py) < 60) {
         health--; updateHearts(); p.el.remove(); projectiles.splice(i, 1);
-        if(health <= 0) showScreen('end-screen');
+        if(health <= 0) { state = 'MENU'; location.reload(); }
       }
     });
 
-    // FIX TELECAMERA CENTRATA VERTICALE
-    let targetX = -px + (window.innerWidth / 2) - 21;
-    let targetY = -py + (window.innerHeight / 2) + 100;
-    scrollX += (targetX - scrollX) * 0.1;
-    scrollY += (targetY - scrollY) * 0.1;
-    if (scrollY > 0) scrollY = 0;
-
-    document.getElementById('world').style.transform = `translate(${scrollX}px, ${scrollY}px)`;
+    // TELECAMERA CHE SEGUE IL GIOCATORE (NON IL MONDO CHE SI MUOVE SOLO)
+    scrollX = -px + (window.innerWidth / 2) - 21;
+    if (scrollX > 0) scrollX = 0;
+    
+    document.getElementById('world').style.transform = `translateX(${scrollX}px)`;
     document.getElementById('player').style.left = px + 'px';
     document.getElementById('player').style.top = py + 'px';
     if(moveDir !== 0) document.getElementById('player').style.transform = (moveDir > 0) ? 'scaleX(1)' : 'scaleX(-1)';
-    
-    if(is1v1) socket.emit('move', { x: px, y: py, dir: moveDir });
   }
   requestAnimationFrame(update);
 }
@@ -264,11 +246,21 @@ function attack() {
   setTimeout(() => { document.getElementById('sword').classList.remove('sword-anim'); isAttacking = false; }, 200);
 }
 
-// FUNZIONI MENU RIPRISTINATE E FUNZIONANTI
 function updateHearts() {
     let h = ""; for(let i=0; i<5; i++) h += (i < health) ? "♥" : "♡";
     document.getElementById('health-ui').innerText = h;
 }
+
+function startPlaying() {
+  state = 'PLAYING'; health = 5; updateHearts();
+  const config = weaponData[currentLevel-1];
+  document.getElementById('weapon-ui').innerText = config.n;
+  document.getElementById('sword').innerText = config.icon;
+  document.getElementById('lvl-ui').innerText = currentLevel;
+  document.getElementById('game-container').style.display = 'block';
+  showScreen('none'); loadLevel(currentLevel);
+}
+
 function showScreen(id) {
   document.querySelectorAll('.overlay-screen').forEach(s => s.classList.add('hide'));
   if(id !== 'none') {
@@ -276,31 +268,26 @@ function showScreen(id) {
     if(id === 'level-menu' || id === 'stats-menu') updateUIStats();
   }
 }
-function startPlaying() {
-  state = 'PLAYING'; health = 5; updateHearts();
-  document.getElementById('game-container').style.display = 'block';
-  showScreen('none'); loadLevel(currentLevel);
-}
-function newGame() { is1v1 = false; currentLevel = 1; startPlaying(); }
+
+function newGame() { currentLevel = 1; startPlaying(); }
 function continueGame() { startPlaying(); }
-function setDifficulty(d) { 
-  difficulty = d; 
-  document.querySelectorAll('#settings-menu .menu-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('diff-'+d).classList.add('active');
-}
+
 function updateUIStats() {
+    const grid = document.getElementById('lvl-grid'); grid.innerHTML = '';
+    for(let i=1; i<=10; i++) {
+        const b = document.createElement('button'); b.className = 'menu-btn'; b.style.width='130px'; b.innerText = "REGNO " + i;
+        b.onclick = () => { currentLevel = i; startPlaying(); }; grid.appendChild(b);
+    }
     document.getElementById('stat-lvls').innerText = unlockedLevel + "/10";
     document.getElementById('stat-boss').innerText = stats.bossKills;
     document.getElementById('stat-deaths').innerText = stats.deaths;
 }
-// Logica socket 1v1
-function askServerCode() { let key = prompt("Chiave stanza:"); if(key) { socket.emit('joinRoom', key); showScreen('powerup-menu'); } }
-function start1v1() { is1v1 = true; startPlaying(); document.getElementById('player2').style.display = 'block'; }
-socket.on('enemyMove', (d) => {
-  let p2 = document.getElementById('player2');
-  p2.style.left = d.x+'px'; p2.style.top = d.y+'px';
-  if(d.dir !== 0) p2.style.transform = (d.dir > 0) ? 'scaleX(1)' : 'scaleX(-1)';
-});
+
+function setDifficulty(d) {
+  difficulty = d;
+  document.querySelectorAll('#settings-menu .menu-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('diff-'+d).classList.add('active');
+}
 
 initControls();
 update();
