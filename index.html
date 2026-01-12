@@ -6,18 +6,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, orientation=landscape"/>
 <script src="/socket.io/socket.io.js"></script>
 <style>
-  /* --- STILE ORIGINALE RIMASTO INVARIATO --- */
+  /* --- STILE ORIGINALE INVARIATO --- */
   * { touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; box-sizing: border-box; }
   body { margin: 0; height: 100vh; width: 100vw; overflow: hidden; background: #020005; font-family: 'Segoe UI', sans-serif; color: #e0c0ff; }
   
-  /* FIX: Blocco verticale per evitare bug di movimento */
+  /* FIX: Prevenzione bug orientamento verticale */
   @media screen and (orientation: portrait) {
     #game-container { display: none !important; }
-    body::after {
-      content: "RUOTA IL TELEFONO IN ORIZZONTALE";
-      position: fixed; inset: 0; background: #020005; color: #bb86fc;
-      display: flex; align-items: center; justify-content: center; font-weight: bold; z-index: 9999;
-    }
+    body::after { content: "RUOTA IN ORIZZONTALE"; position: fixed; inset: 0; background: #020005; color: white; display: flex; align-items: center; justify-content: center; z-index: 9999; }
   }
 
   #stars-bg { position: fixed; inset: 0; background: radial-gradient(circle at center, #1a0033 0%, #020005 100%); z-index: -1; }
@@ -34,9 +30,9 @@
   #game-container { position: relative; width: 100%; height: 100%; display: none; overflow: hidden; }
   #world { position: absolute; top: 0; left: 0; width: 15000px; height: 100%; }
   
-  /* FIX: Colori fissi per evitare scambi tra dispositivi */
+  /* FIX: Colori bloccati per evitare scambi tra client */
   #player { position: absolute; width: 42px; height: 58px; background: #ce93d8; border-radius: 8px; border: 3px solid #f3e5f5; z-index: 10; box-shadow: 0 0 20px rgba(206, 147, 216, 0.6); }
-  #player2 { position: absolute; width: 42px; height: 58px; background: #4fc3f7; border-radius: 8px; border: 3px solid #e1f5fe; z-index: 9; display: none; box-shadow: 0 0 20px rgba(79, 195, 247, 0.6); }
+  #player2 { position: absolute; width: 42px; height: 58px; background: #4fc3f7; border-radius: 8px; border: 3px solid #e1f5fe; z-index: 9; display: none; }
 
   #sword { position: absolute; width: 50px; height: 50px; display: none; z-index: 11; font-size: 35px; top: -5px; left: 25px; transform-origin: left center; }
   .sword-anim { display: flex !important; align-items: center; justify-content: center; animation: slash 0.2s ease-out; }
@@ -44,7 +40,8 @@
 
   .platform { position: absolute; background: linear-gradient(180deg, #311b92, #1a237e); border: 1px solid #7c43bd; border-radius: 4px; }
   .boss { position: absolute; width: 110px; height: 140px; border-radius: 15px; z-index: 5; border: 4px solid white; display: flex; align-items: center; justify-content: center; font-size: 40px; }
-  
+  .fountain { position: absolute; width: 80px; height: 100px; display: flex; align-items: center; justify-content: center; font-size: 50px; z-index: 8; text-shadow: 0 0 20px #00e5ff; }
+
   #ui-bar { position: fixed; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; z-index: 100; pointer-events: none; }
   .ui-element { pointer-events: auto; background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 12px; border: 1px solid #7c43bd; font-weight: bold; }
 
@@ -67,6 +64,7 @@
   <h1>KING</h1>
   <p class="subtitle">FINAL SYMBOLS</p>
   <button class="menu-btn" onclick="newGame()">NUOVO INIZIO</button>
+  <button class="menu-btn" id="cont-btn" onclick="continueGame()">CONTINUA</button>
   <button class="menu-btn" onclick="showScreen('level-menu')">LIVELLI</button>
   <button class="menu-btn" onclick="askServerCode()" style="background: #b71c1c;">SCONTRO 1v1</button>
   <button class="menu-btn" onclick="showScreen('stats-menu')">PROGRESSI</button>
@@ -74,19 +72,13 @@
 
 <div id="powerup-menu" class="overlay-screen hide">
   <h1>POTENZIAMENTI SFIDA</h1>
-  <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid #7c43bd; width: 350px; margin-bottom: 20px;">
+  <div class="stats-box" style="padding: 20px; border: 1px solid #7c43bd; border-radius: 15px;">
     <div class="pow-item active" onclick="selectSkill(this, 'speed')">⚡ VELOCITÀ</div>
     <div class="pow-item" onclick="selectSkill(this, 'shield')">🛡️ SCUDO REALE</div>
     <div class="pow-item" onclick="selectSkill(this, 'power')">🔥 COLPO ESPLOSIVO</div>
     <div class="pow-item" onclick="selectSkill(this, 'slow')">❄️ RALLENTAMENTO</div>
   </div>
   <button class="menu-btn" onclick="start1v1()">INIZIA BATTAGLIA</button>
-</div>
-
-<div id="level-menu" class="overlay-screen hide">
-  <h1>REGNI</h1>
-  <div id="lvl-grid"></div>
-  <button class="menu-btn" onclick="showScreen('main-menu')">INDIETRO</button>
 </div>
 
 <div id="game-container">
@@ -108,6 +100,12 @@
   </div>
 </div>
 
+<div id="level-menu" class="overlay-screen hide">
+  <h1>REGNI</h1>
+  <div id="lvl-grid"></div>
+  <button class="menu-btn" onclick="showScreen('main-menu')">INDIETRO</button>
+</div>
+
 <script>
 const socket = io();
 let state = 'MENU', currentLevel = 1, unlockedLevel = 1;
@@ -115,7 +113,7 @@ let px, py, vx, vy, health, stats = { deaths: 0, bossKills: 0 };
 let onGround = false, moveDir = 0, scrollX = 0, holdingJump = false, isAttacking = false;
 let bosses = [], is1v1 = false, activeSkill = 'speed', currentRoom = null;
 
-// Sincronizzazione 1v1: Ricezione dati
+// Sincronizzazione 1v1
 socket.on('enemyMove', (data) => {
     const p2 = document.getElementById('player2');
     if(p2) {
@@ -128,8 +126,7 @@ socket.on('enemyMove', (data) => {
 
 socket.on('enemyAttack', (data) => {
     let dist = Math.abs(px - data.x);
-    let distY = Math.abs(py - data.y);
-    if(dist < 70 && distY < 50) {
+    if(dist < 70) {
         if(activeSkill === 'shield' && Math.random() > 0.5) return;
         health--; updateHearts();
         if(health <= 0) location.reload();
@@ -173,7 +170,7 @@ function loadLevel(n) {
   const world = document.getElementById('world');
   world.querySelectorAll('.platform, .boss').forEach(e => e.remove());
   
-  // FIX: Altezza suolo calcolata in modo fisso per evitare fluttuazioni tra schermi diversi
+  // FIX: Altezza suolo identica per ogni dispositivo
   const groundY = 500; 
 
   const arena = document.createElement('div');
@@ -191,7 +188,6 @@ function update() {
     vy += (vy < 0 && holdingJump) ? 0.38 : 0.85;
     px += vx; py += vy;
 
-    // FIX Collisioni: Range di tolleranza ridotto per evitare "balzelli"
     onGround = false;
     document.querySelectorAll('.platform').forEach(pl => {
       let pL = parseInt(pl.style.left), pT = parseInt(pl.style.top), pW = parseInt(pl.style.width);
@@ -200,7 +196,6 @@ function update() {
       }
     });
 
-    // Sincronizzazione: Invia posizione
     if(is1v1) socket.emit('move', { x: px, y: py, dir: moveDir });
 
     let targetX = -px + (window.innerWidth / 2.5);
@@ -209,8 +204,7 @@ function update() {
 
     document.getElementById('world').style.transform = `translateX(${scrollX}px)`;
     const pEl = document.getElementById('player');
-    pEl.style.left = px + 'px'; 
-    pEl.style.top = py + 'px';
+    pEl.style.left = px + 'px'; pEl.style.top = py + 'px';
     if(moveDir !== 0) pEl.style.transform = (moveDir > 0) ? 'scaleX(1)' : 'scaleX(-1)';
   }
   requestAnimationFrame(update);
