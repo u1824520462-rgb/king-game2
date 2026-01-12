@@ -13,11 +13,7 @@
   /* FIX: Prevenzione bug orientamento verticale */
   @media screen and (orientation: portrait) {
     #game-container { display: none !important; }
-    body::after { 
-      content: "RUOTA IL DISPOSITIVO IN ORIZZONTALE"; 
-      position: fixed; inset: 0; background: #020005; color: white; 
-      display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; z-index: 9999; 
-    }
+    body::after { content: "RUOTA IN ORIZZONTALE"; position: fixed; inset: 0; background: #020005; color: white; display: flex; align-items: center; justify-content: center; z-index: 9999; }
   }
 
   #stars-bg { position: fixed; inset: 0; background: radial-gradient(circle at center, #1a0033 0%, #020005 100%); z-index: -1; }
@@ -28,12 +24,10 @@
   .subtitle { color: #bb86fc; margin-bottom: 20px; letter-spacing: 2px; }
 
   .menu-btn { background: #4a148c; color: white; border: 2px solid #7c43bd; padding: 10px 20px; margin: 5px; font-size: 1rem; cursor: pointer; border-radius: 12px; width: 280px; transition: 0.2s; }
-  .menu-btn:hover { background: #7c43bd; transform: scale(1.05); }
-
+  
   #game-container { position: relative; width: 100%; height: 100%; display: none; overflow: hidden; }
   #world { position: absolute; top: 0; left: 0; width: 15000px; height: 100%; }
   
-  /* FIX: Colori fissi */
   #player { position: absolute; width: 42px; height: 58px; background: #ce93d8; border-radius: 8px; border: 3px solid #f3e5f5; z-index: 10; box-shadow: 0 0 20px rgba(206, 147, 216, 0.6); }
   #player2 { position: absolute; width: 42px; height: 58px; background: #4fc3f7; border-radius: 8px; border: 3px solid #e1f5fe; z-index: 9; display: none; }
 
@@ -42,7 +36,7 @@
   @keyframes slash { 0% { transform: rotate(-60deg); } 100% { transform: rotate(60deg); } }
 
   .platform { position: absolute; background: linear-gradient(180deg, #311b92, #1a237e); border: 1px solid #7c43bd; border-radius: 4px; }
-  .boss { position: absolute; width: 110px; height: 140px; border-radius: 15px; z-index: 5; border: 4px solid white; display: flex; align-items: center; justify-content: center; font-size: 40px; transition: opacity 0.3s; }
+  .boss { position: absolute; width: 110px; height: 140px; border-radius: 15px; z-index: 5; border: 4px solid white; display: flex; align-items: center; justify-content: center; font-size: 40px; }
   .projectile { position: absolute; width: 24px; height: 24px; border-radius: 50%; z-index: 9; background: #ffeb3b; box-shadow: 0 0 15px #ffeb3b; display: flex; align-items: center; justify-content: center; font-size: 14px; }
   
   #ui-bar { position: fixed; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; z-index: 100; pointer-events: none; }
@@ -53,7 +47,6 @@
   #knob { position: absolute; width: 70px; height: 70px; background: #7c43bd; border: 2px solid white; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; }
   .btn-group { display: flex; gap: 25px; pointer-events: auto; }
   .action-btn { width: 110px; height: 110px; border-radius: 50%; border: 4px solid rgba(255,255,255,0.4); color: white; font-size: 3rem; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); cursor: pointer; }
-  
   .hide { display: none !important; }
 </style>
 </head>
@@ -65,13 +58,12 @@
   <h1>KING</h1>
   <p class="subtitle">FINAL SYMBOLS</p>
   <button class="menu-btn" onclick="startPlaying()">NUOVO INIZIO</button>
-  <button class="menu-btn" onclick="askServerCode()">SCONTRO 1v1</button>
 </div>
 
 <div id="game-container">
   <div id="ui-bar">
     <div class="ui-element">HP: <span id="health-ui">♥♥♥♥♥</span></div>
-    <div class="ui-element">REGNO: <span id="lvl-ui">1</span></div>
+    <div class="ui-element">LVL: 1</div>
     <button class="ui-element" style="color: white; pointer-events:auto;" onclick="location.reload()">Esci</button>
   </div>
   <div id="world">
@@ -97,7 +89,7 @@ const socket = io();
 let state = 'MENU', currentLevel = 1;
 let px, py, vx, vy, health;
 let onGround = false, moveDir = 0, scrollX = 0, scrollY = 0, holdingJump = false, isAttacking = false;
-let projectiles = [], bosses = [], is1v1 = false;
+let projectiles = [], bosses = [];
 
 function initControls() {
   const btnJmp = document.getElementById('btnJmp');
@@ -120,30 +112,23 @@ function initControls() {
   joyArea.onpointerup = () => { moveDir = 0; knob.style.left = '50%'; };
 }
 
-function askServerCode() {
-    let key = prompt("Codice stanza:");
-    if(key) { socket.emit('joinRoom', key); is1v1 = true; startPlaying(); document.getElementById('player2').style.display = 'block'; }
-}
-
 function loadLevel(n) {
   const world = document.getElementById('world');
   world.querySelectorAll('.platform, .boss, .projectile').forEach(e => e.remove());
   projectiles = [];
   
   const groundY = 500; 
-  const plats = [{w:5000, h:100, l:0, t:groundY}];
-  plats.forEach(p => {
-    const d = document.createElement('div'); d.className = 'platform';
-    d.style.width = p.w+'px'; d.style.height = p.h+'px'; d.style.left = p.l+'px'; d.style.top = p.t+'px';
-    world.appendChild(d);
-  });
+  const p = {w:5000, h:100, l:0, t:groundY};
+  const d = document.createElement('div'); d.className = 'platform';
+  d.style.width = p.w+'px'; d.style.height = p.h+'px'; d.style.left = p.l+'px'; d.style.top = p.t+'px';
+  world.appendChild(d);
 
-  // BOSS SCONFITTILE (HP: 30)
+  // Boss con HP per essere sconfitto
   bosses = [{id:'b1', x:2000, hp:30, lastShot: 0, dead: false}];
   bosses.forEach(b => {
-    const d = document.createElement('div'); d.id = b.id; d.className = 'boss';
-    d.style.left = b.x+'px'; d.style.top = (groundY - 140)+'px'; d.innerHTML = '👾';
-    world.appendChild(d);
+    const el = document.createElement('div'); el.id = b.id; el.className = 'boss';
+    el.style.left = b.x+'px'; el.style.top = (groundY - 140)+'px'; el.innerHTML = '👾';
+    world.appendChild(el);
   });
   
   px = 150; py = groundY - 60;
@@ -155,6 +140,7 @@ function update() {
     vy += (vy < 0 && holdingJump) ? 0.38 : 0.85;
     px += vx; py += vy;
 
+    // Collisioni
     onGround = false;
     document.querySelectorAll('.platform').forEach(pl => {
       let pL = parseInt(pl.style.left), pT = parseInt(pl.style.top), pW = parseInt(pl.style.width);
@@ -163,46 +149,38 @@ function update() {
       }
     });
 
-    // ATTACCO BOSS E SCONFITTA
-    bosses.forEach((b, index) => {
-      if(!b.dead) {
-        if (Date.now() - b.lastShot > 2500) {
-          let shot = document.createElement('div');
-          shot.className = 'projectile'; shot.innerHTML = '☄️';
-          shot.style.left = b.x + 'px'; shot.style.top = (450) + 'px';
-          document.getElementById('world').appendChild(shot);
-          projectiles.push({el: shot, x: b.x, y: 450, vx: -6});
-          b.lastShot = Date.now();
-        }
+    // Attacco Boss (Solo se non è morto)
+    bosses.forEach(b => {
+      if(!b.dead && Date.now() - b.lastShot > 2500) {
+        let shot = document.createElement('div');
+        shot.className = 'projectile'; shot.innerHTML = '☄️';
+        shot.style.left = b.x + 'px'; shot.style.top = '450px';
+        document.getElementById('world').appendChild(shot);
+        projectiles.push({el: shot, x: b.x, y: 450, vx: -6});
+        b.lastShot = Date.now();
       }
     });
 
-    // Collisione proiettili
+    // Proiettili
     projectiles.forEach((p, i) => {
-      p.x += p.vx;
-      p.el.style.left = p.x + 'px';
+      p.x += p.vx; p.el.style.left = p.x + 'px';
       if (Math.abs(p.x - px) < 40 && Math.abs(p.y - py) < 60) {
-        health--; updateHearts();
-        p.el.remove(); projectiles.splice(i, 1);
+        health--; updateHearts(); p.el.remove(); projectiles.splice(i, 1);
         if(health <= 0) showScreen('end-screen');
       }
-      if(p.x < px - 1000) { p.el.remove(); projectiles.splice(i, 1); }
     });
 
-    // FIX TELECAMERA CENTRATA (PC E TELEFONO)
+    // FIX TELECAMERA: Centratura migliorata per mobile
     let targetX = -px + (window.innerWidth / 2) - 21;
-    let targetY = -py + (window.innerHeight / 2) + 100; // Centratura verticale migliorata
+    let targetY = -py + (window.innerHeight / 2) + 50; 
     scrollX += (targetX - scrollX) * 0.1;
     scrollY += (targetY - scrollY) * 0.1;
-    if (scrollY > 0) scrollY = 0; 
+    if (scrollY > 0) scrollY = 0;
 
     document.getElementById('world').style.transform = `translate(${scrollX}px, ${scrollY}px)`;
-    
     const pEl = document.getElementById('player');
     pEl.style.left = px + 'px'; pEl.style.top = py + 'px';
     if(moveDir !== 0) pEl.style.transform = (moveDir > 0) ? 'scaleX(1)' : 'scaleX(-1)';
-    
-    if(is1v1) socket.emit('move', { x: px, y: py, dir: moveDir });
   }
   requestAnimationFrame(update);
 }
@@ -212,18 +190,11 @@ function attack() {
   isAttacking = true;
   document.getElementById('sword').classList.add('sword-anim');
   
-  // LOGICA PER SCONFIGGERE I BOSS
-  bosses.forEach((b) => {
+  // Sconfiggere il boss
+  bosses.forEach(b => {
     if(!b.dead && Math.abs(px - b.x) < 160) {
       b.hp -= 10;
-      // Effetto visivo colpo
-      document.getElementById(b.id).style.opacity = "0.5";
-      setTimeout(() => { if(!b.dead) document.getElementById(b.id).style.opacity = "1"; }, 100);
-      
-      if(b.hp <= 0) { 
-        b.dead = true; 
-        document.getElementById(b.id).style.display = 'none'; 
-      }
+      if(b.hp <= 0) { b.dead = true; document.getElementById(b.id).style.display = 'none'; }
     }
   });
 
@@ -238,7 +209,7 @@ function updateHearts() {
 function startPlaying() {
   state = 'PLAYING'; health = 5; updateHearts();
   document.getElementById('game-container').style.display = 'block';
-  showScreen('none'); loadLevel(currentLevel);
+  showScreen('none'); loadLevel(1);
 }
 
 function showScreen(id) {
