@@ -5,7 +5,7 @@
 <title>King Final Symbols - Ultimate Edition</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, orientation=landscape"/>
 <style>
-  /* --- STILE ORIGINALE RIMASTO INVARIATO --- */
+  /* --- GRAFICA ORIGINALE RIMASTA INVARIATA --- */
   * { touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; box-sizing: border-box; }
   body { margin: 0; height: 100vh; width: 100vw; overflow: hidden; background: #020005; font-family: 'Segoe UI', sans-serif; color: #e0c0ff; }
   #stars-bg { position: fixed; inset: 0; background: radial-gradient(circle at center, #1a0033 0%, #020005 100%); z-index: -1; }
@@ -21,7 +21,7 @@
   .menu-btn.active { background: #00e676; border-color: white; color: black; font-weight: bold; }
 
   #game-container { position: relative; width: 100%; height: 100%; display: none; overflow: hidden; }
-  #world { position: absolute; top: 0; left: 0; width: 15000px; height: 100%; transition: transform 0.1s ease-out; }
+  #world { position: absolute; top: 0; left: 0; width: 15000px; height: 100%; }
   #player { position: absolute; width: 42px; height: 58px; background: #ce93d8; border-radius: 8px; border: 3px solid #f3e5f5; z-index: 10; box-shadow: 0 0 20px rgba(206, 147, 216, 0.6); }
   
   #player2 { position: absolute; width: 42px; height: 58px; background: #4fc3f7; border-radius: 8px; border: 3px solid #e1f5fe; z-index: 9; display: none; }
@@ -43,8 +43,8 @@
   .action-btn { width: 110px; height: 110px; border-radius: 50%; border: 4px solid rgba(255,255,255,0.4); color: white; font-size: 3rem; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; }
   
   .hide { display: none !important; }
-  .pow-item { border: 1px solid #7c43bd; padding: 15px; margin: 10px; border-radius: 8px; background: rgba(124, 67, 189, 0.1); cursor: pointer; color: white; transition: 0.3s; width: 100%; }
-  .pow-item.active { border-color: #00e676; box-shadow: 0 0 15px #00e676; background: rgba(0, 230, 118, 0.2); transform: scale(1.05); }
+  .pow-item { border: 1px solid #7c43bd; padding: 10px; margin: 5px; border-radius: 8px; background: rgba(124, 67, 189, 0.1); cursor: pointer; color: white; transition: 0.2s; }
+  .pow-item.active { border-color: #00e676; box-shadow: 0 0 10px #00e676; background: rgba(0, 230, 118, 0.2); }
 </style>
 </head>
 <body>
@@ -57,21 +57,21 @@
   <button class="menu-btn" onclick="newGame()">NUOVO INIZIO</button>
   <button class="menu-btn" onclick="showScreen('level-menu')">LIVELLI</button>
   <button class="menu-btn" onclick="askServerCode()" style="background: #b71c1c; border-color: #ff5252;">SCONTRO 1v1</button>
-  <button class="menu-btn" onclick="showScreen('stats-menu')">PROGRESSI</button>
+  <button class="menu-btn" onclick="showScreen('stats-menu')">PROGRESSI E DATI</button>
 </div>
 
 <div id="powerup-menu" class="overlay-screen hide">
-  <h1>SCEGLI IL TUO POTERE</h1>
-  <div style="width: 320px;">
-    <div class="pow-item active" id="pow-speed" onclick="selectSkill(this, 'speed')">⚡ SUPER VELOCITÀ</div>
-    <div class="pow-item" id="pow-shield" onclick="selectSkill(this, 'shield')">🛡️ SCUDO REALE</div>
-    <div class="pow-item" id="pow-power" onclick="selectSkill(this, 'power')">🔥 FORZA BRUTA</div>
+  <h1>POTENZIAMENTI SFIDA</h1>
+  <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid #7c43bd; width: 350px; text-align: center; margin-bottom: 20px;">
+    <div class="pow-item active" onclick="selectSkill(this, 'speed')">⚡ VELOCITÀ</div>
+    <div class="pow-item" onclick="selectSkill(this, 'shield')">🛡️ SCUDO REALE</div>
+    <div class="pow-item" onclick="selectSkill(this, 'power')">🔥 COLPO ESPLOSIVO</div>
   </div>
-  <button class="menu-btn" onclick="start1v1()" style="margin-top: 20px; background: #00e676; color: black;">ENTRA NELLA LOBBY</button>
+  <button class="menu-btn" onclick="start1v1()">INIZIA BATTAGLIA</button>
 </div>
 
 <div id="level-menu" class="overlay-screen hide">
-  <h1>REGNI</h1>
+  <h1>SELEZIONA REGNO</h1>
   <div id="lvl-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;"></div>
   <button class="menu-btn" onclick="showScreen('main-menu')" style="background:#222; margin-top:20px;">INDIETRO</button>
 </div>
@@ -79,7 +79,7 @@
 <div id="game-container">
   <div id="ui-bar">
     <div class="ui-element">HP: <span id="health-ui">♥♥♥♥♥</span></div>
-    <div class="ui-element"><span id="mode-ui">MODALITÀ REALE</span></div>
+    <div class="ui-element">LVL: <span id="lvl-ui">1</span></div>
     <button class="ui-element" onclick="location.reload()">Esci</button>
   </div>
   <div id="world">
@@ -89,8 +89,8 @@
   <div class="controls">
     <div class="joystick-area" id="joyArea"><div id="knob"></div></div>
     <div class="btn-group">
-      <button class="action-btn" id="btnAtk">⚔️</button>
-      <button class="action-btn" id="btnJmp">⬆️</button>
+      <button class="action-btn" style="background:rgba(76, 175, 80, 0.6)" id="btnAtk">⚔️</button>
+      <button class="action-btn" style="background:rgba(255, 51, 102, 0.6)" id="btnJmp">⬆️</button>
     </div>
   </div>
 </div>
@@ -129,7 +129,7 @@ function selectSkill(el, skill) {
 }
 
 function askServerCode() {
-  let key = prompt("Inserisci codice stanza per 1v1:");
+  let key = prompt("Crea chiave stanza:");
   if(key) showScreen('powerup-menu');
 }
 
@@ -144,60 +144,49 @@ function loadLevel(n) {
   const groundY = window.innerHeight - 100;
 
   if (is1v1) {
-    // ARENA 1v1: Una grande piattaforma centrale
     const arena = document.createElement('div');
     arena.className = 'platform';
     arena.style.cssText = `width: 3000px; height: 100px; left: 0; top: ${groundY}px;`;
     world.appendChild(arena);
-
-    // Posizionamento: Giocatore 1 a sinistra, Giocatore 2 a destra
-    px = 300; py = groundY - 60;
+    
+    // Posizionamento sistemato
+    px = 200; py = groundY - 60;
     const p2 = document.getElementById('player2');
     p2.style.display = 'block';
-    p2.style.left = '1200px'; 
+    p2.style.left = '1000px'; 
     p2.style.top = (groundY - 58) + 'px';
-    document.getElementById('mode-ui').innerText = "SFIDA 1v1";
   } else {
-    // Livello Normale
     const ground = document.createElement('div');
     ground.className = 'platform';
     ground.style.cssText = `width: 5000px; height: 100px; left: 0; top: ${groundY}px;`;
     world.appendChild(ground);
-    px = 100; py = groundY - 60;
-    document.getElementById('mode-ui').innerText = "REGNO " + n;
+    px = 150; py = groundY - 60;
   }
 }
 
 function update() {
   if (state === 'PLAYING') {
-    // LOGICA POTERI
-    let speedBonus = (activeSkill === 'speed') ? 1.7 : 1.1;
+    // APPLICAZIONE POTERI
+    let speedMult = (activeSkill === 'speed') ? 1.8 : 1.2;
     
-    vx += moveDir * speedBonus; vx *= 0.88;
+    vx += moveDir * speedMult; vx *= 0.88;
     let curGrav = (vy < 0 && holdingJump) ? 0.38 : 0.85;
     vy += curGrav; px += vx; py += vy;
 
-    // Collisione con il terreno dell'arena
     const groundY = window.innerHeight - 100;
     onGround = false;
-    if (py > groundY - 58) {
-      py = groundY - 58;
-      vy = 0;
-      onGround = true;
-    }
+    if (py > groundY - 58) { py = groundY - 58; vy = 0; onGround = true; }
 
-    // Telecamera fluida
     let targetX = -px + (window.innerWidth / 2.5);
     scrollX += (targetX - scrollX) * 0.1;
     if(scrollX > 0) scrollX = 0;
 
     document.getElementById('world').style.transform = `translateX(${scrollX}px)`;
     const pEl = document.getElementById('player');
-    pEl.style.left = px + 'px';
-    pEl.style.top = py + 'px';
-    
-    // Effetto scudo visivo
-    if(activeSkill === 'shield') pEl.style.boxShadow = "0 0 25px #00e676";
+    pEl.style.left = px + 'px'; pEl.style.top = py + 'px';
+
+    // Effetto visivo scudo
+    if(activeSkill === 'shield') pEl.style.boxShadow = "0 0 20px #00e676";
     else pEl.style.boxShadow = "0 0 20px rgba(206, 147, 216, 0.6)";
 
     if(moveDir !== 0) pEl.style.transform = (moveDir > 0) ? 'scaleX(1)' : 'scaleX(-1)';
@@ -211,18 +200,21 @@ function attack() {
   const s = document.getElementById('sword');
   s.classList.add('sword-anim'); 
   
-  // Se hai il potere FORZA, la spada diventa rossa e più grande
-  if(activeSkill === 'power') s.style.filter = "drop-shadow(0 0 10px red) hue-rotate(300deg)";
-  else s.style.filter = "none";
+  // Effetto visivo potenza
+  if(activeSkill === 'power') s.style.transform = "scale(1.5)";
+  else s.style.transform = "scale(1)";
 
-  setTimeout(() => { s.classList.remove('sword-anim'); isAttacking = false; }, 200); 
+  setTimeout(() => { 
+    s.classList.remove('sword-anim'); 
+    s.style.transform = "scale(1)";
+    isAttacking = false; 
+  }, 200); 
 }
 
 function startPlaying() { 
   state = 'PLAYING';
   health = 5;
-  document.getElementById('main-menu').classList.add('hide');
-  document.getElementById('powerup-menu').classList.add('hide');
+  document.querySelectorAll('.overlay-screen').forEach(s => s.classList.add('hide'));
   document.getElementById('game-container').style.display = 'block'; 
   loadLevel(currentLevel); 
 }
@@ -232,7 +224,7 @@ function showScreen(id) {
   document.getElementById(id).classList.remove('hide');
 }
 
-function newGame() { is1v1 = false; currentLevel = 1; startPlaying(); }
+function newGame() { is1v1 = false; startPlaying(); }
 
 initControls();
 update();
