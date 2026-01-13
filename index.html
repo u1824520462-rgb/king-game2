@@ -6,64 +6,62 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, orientation=landscape"/>
 <script src="/socket.io/socket.io.js"></script>
 <style>
-  /* --- STILE ORIGINALE RIMASTO INVARIATO --- */
-  * { touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; box-sizing: border-box; }
-  body { margin: 0; height: 100vh; width: 100vw; overflow: hidden; background: #020005; font-family: 'Segoe UI', sans-serif; color: #e0c0ff; }
-  
-  /* FIX: Prevenzione bug orientamento verticale */
-  @media screen and (orientation: portrait) {
-    #game-container { display: none !important; }
-    body::after { 
-      content: "RUOTA IL DISPOSITIVO IN ORIZZONTALE PER GIOCARE"; 
-      position: fixed; inset: 0; background: #020005; color: white; 
-      display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; z-index: 9999; 
-    }
-  }
+  /* --- STILE ORIGINALE RIMASTO INVARIATO --- */
+  * { touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; box-sizing: border-box; }
+  body { margin: 0; height: 100vh; width: 100vw; overflow: hidden; background: #020005; font-family: 'Segoe UI', sans-serif; color: #e0c0ff; }
+  
+  @media screen and (orientation: portrait) {
+    #game-container { display: none !important; }
+    body::after { 
+      content: "RUOTA IL DISPOSITIVO IN ORIZZONTALE PER GIOCARE"; 
+      position: fixed; inset: 0; background: #020005; color: white; 
+      display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; z-index: 9999; 
+    }
+  }
 
-  #stars-bg { position: fixed; inset: 0; background: radial-gradient(circle at center, #1a0033 0%, #020005 100%); z-index: -1; }
-  #stars-bg::before { content: ""; position: absolute; inset: 0; background-image: radial-gradient(2px 2px at 50px 100px, #fff, transparent), radial-gradient(1px 1px at 200px 300px, #fff, transparent); background-size: 400px 400px; }
-  
-  .overlay-screen { position: fixed; inset: 0; background: rgba(5, 0, 15, 0.98); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 500; text-align: center; }
-  h1 { font-size: 3rem; color: #f3e5f5; margin: 0; text-shadow: 0 0 20px #7c43bd; }
-  .subtitle { color: #bb86fc; margin-bottom: 20px; letter-spacing: 2px; }
+  #stars-bg { position: fixed; inset: 0; background: radial-gradient(circle at center, #1a0033 0%, #020005 100%); z-index: -1; }
+  #stars-bg::before { content: ""; position: absolute; inset: 0; background-image: radial-gradient(2px 2px at 50px 100px, #fff, transparent), radial-gradient(1px 1px at 200px 300px, #fff, transparent); background-size: 400px 400px; }
+  
+  .overlay-screen { position: fixed; inset: 0; background: rgba(5, 0, 15, 0.98); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 500; text-align: center; }
+  h1 { font-size: 3rem; color: #f3e5f5; margin: 0; text-shadow: 0 0 20px #7c43bd; }
+  .subtitle { color: #bb86fc; margin-bottom: 20px; letter-spacing: 2px; }
 
-  .menu-btn { background: #4a148c; color: white; border: 2px solid #7c43bd; padding: 10px 20px; margin: 5px; font-size: 1rem; cursor: pointer; border-radius: 12px; width: 280px; transition: 0.2s; }
-  .menu-btn:hover { background: #7c43bd; transform: scale(1.05); }
-  .menu-btn:disabled { background: #222; border-color: #444; opacity: 0.5; cursor: default; }
-  .menu-btn.active { background: #00e676; border-color: white; color: black; font-weight: bold; }
+  .menu-btn { background: #4a148c; color: white; border: 2px solid #7c43bd; padding: 10px 20px; margin: 5px; font-size: 1rem; cursor: pointer; border-radius: 12px; width: 280px; transition: 0.2s; }
+  .menu-btn:hover { background: #7c43bd; transform: scale(1.05); }
+  .menu-btn:disabled { background: #222; border-color: #444; opacity: 0.5; cursor: default; }
+  .menu-btn.active { background: #00e676; border-color: white; color: black; font-weight: bold; }
 
-  #game-container { position: relative; width: 100%; height: 100%; display: none; overflow: hidden; }
-  #world { position: absolute; top: 0; left: 0; width: 15000px; height: 100%; }
-  
-  /* FIX: Colori fissi per Player 1 e Player 2 per evitare confusione */
-  #player { position: absolute; width: 42px; height: 58px; background: #ce93d8; border-radius: 8px; border: 3px solid #f3e5f5; z-index: 10; box-shadow: 0 0 20px rgba(206, 147, 216, 0.6); }
-  #player2 { position: absolute; width: 42px; height: 58px; background: #4fc3f7; border-radius: 8px; border: 3px solid #e1f5fe; z-index: 9; display: none; box-shadow: 0 0 20px rgba(79, 195, 247, 0.6); }
+  #game-container { position: relative; width: 100%; height: 100%; display: none; overflow: hidden; }
+  #world { position: absolute; top: 0; left: 0; width: 15000px; height: 100%; }
+  
+  #player { position: absolute; width: 42px; height: 58px; background: #ce93d8; border-radius: 8px; border: 3px solid #f3e5f5; z-index: 10; box-shadow: 0 0 20px rgba(206, 147, 216, 0.6); }
+  #player2 { position: absolute; width: 42px; height: 58px; background: #4fc3f7; border-radius: 8px; border: 3px solid #e1f5fe; z-index: 9; display: none; box-shadow: 0 0 20px rgba(79, 195, 247, 0.6); }
 
-  #sword { position: absolute; width: 50px; height: 50px; display: none; z-index: 11; font-size: 35px; top: -5px; left: 25px; transform-origin: left center; }
-  .sword-anim { display: flex !important; align-items: center; justify-content: center; animation: slash 0.2s ease-out; }
-  @keyframes slash { 0% { transform: rotate(-60deg); } 100% { transform: rotate(60deg); } }
+  #sword { position: absolute; width: 50px; height: 50px; display: none; z-index: 11; font-size: 35px; top: -5px; left: 25px; transform-origin: left center; }
+  .sword-anim { display: flex !important; align-items: center; justify-content: center; animation: slash 0.2s ease-out; }
+  @keyframes slash { 0% { transform: rotate(-60deg); } 100% { transform: rotate(60deg); } }
 
-  .platform { position: absolute; background: linear-gradient(180deg, #311b92, #1a237e); border: 1px solid #7c43bd; border-radius: 4px; }
-  .boss { position: absolute; width: 110px; height: 140px; border-radius: 15px; z-index: 5; border: 4px solid white; display: flex; align-items: center; justify-content: center; font-size: 40px; }
-  .projectile { position: absolute; width: 24px; height: 24px; border-radius: 50%; z-index: 9; background: #ffeb3b; box-shadow: 0 0 15px #ffeb3b; display: flex; align-items: center; justify-content: center; font-size: 14px; }
-  
-  .fountain { position: absolute; width: 80px; height: 100px; display: flex; align-items: center; justify-content: center; font-size: 50px; z-index: 8; text-shadow: 0 0 20px #00e5ff; transition: 0.5s; }
+  .platform { position: absolute; background: linear-gradient(180deg, #311b92, #1a237e); border: 1px solid #7c43bd; border-radius: 4px; }
+  .boss { position: absolute; width: 110px; height: 140px; border-radius: 15px; z-index: 5; border: 4px solid white; display: flex; align-items: center; justify-content: center; font-size: 40px; }
+  .projectile { position: absolute; width: 24px; height: 24px; border-radius: 50%; z-index: 9; background: #ffeb3b; box-shadow: 0 0 15px #ffeb3b; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  
+  .fountain { position: absolute; width: 80px; height: 100px; display: flex; align-items: center; justify-content: center; font-size: 50px; z-index: 8; text-shadow: 0 0 20px #00e5ff; transition: 0.5s; }
 
-  #ui-bar { position: fixed; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; z-index: 100; pointer-events: none; }
-  .ui-element { pointer-events: auto; background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 12px; border: 1px solid #7c43bd; font-weight: bold; }
+  #ui-bar { position: fixed; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; z-index: 100; pointer-events: none; }
+  .ui-element { pointer-events: auto; background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 12px; border: 1px solid #7c43bd; font-weight: bold; }
 
-  .controls { position: fixed; bottom: 30px; left: 30px; right: 30px; z-index: 150; display: flex; justify-content: space-between; align-items: flex-end; pointer-events: none; }
-  .joystick-area { width: 160px; height: 160px; background: rgba(255, 255, 255, 0.1); border: 3px solid rgba(255, 255, 255, 0.4); border-radius: 50%; position: relative; pointer-events: auto; }
-  #knob { position: absolute; width: 70px; height: 70px; background: #7c43bd; border: 2px solid white; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; }
-  .btn-group { display: flex; gap: 25px; pointer-events: auto; }
-  .action-btn { width: 110px; height: 110px; border-radius: 50%; border: 4px solid rgba(255,255,255,0.4); color: white; font-size: 3rem; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; }
-  
-  .hide { display: none !important; }
-  #lvl-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .stats-box { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid #7c43bd; width: 300px; text-align: left; margin-bottom: 20px; }
+  .controls { position: fixed; bottom: 30px; left: 30px; right: 30px; z-index: 150; display: flex; justify-content: space-between; align-items: flex-end; pointer-events: none; }
+  .joystick-area { width: 160px; height: 160px; background: rgba(255, 255, 255, 0.1); border: 3px solid rgba(255, 255, 255, 0.4); border-radius: 50%; position: relative; pointer-events: auto; }
+  #knob { position: absolute; width: 70px; height: 70px; background: #7c43bd; border: 2px solid white; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+  .btn-group { display: flex; gap: 25px; pointer-events: auto; }
+  .action-btn { width: 110px; height: 110px; border-radius: 50%; border: 4px solid rgba(255,255,255,0.4); color: white; font-size: 3rem; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; }
+  
+  .hide { display: none !important; }
+  #lvl-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .stats-box { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid #7c43bd; width: 300px; text-align: left; margin-bottom: 20px; }
 
-  .pow-item { border: 1px solid #7c43bd; padding: 10px; margin: 5px; border-radius: 8px; background: rgba(124, 67, 189, 0.1); cursor: pointer; color: white; transition: 0.2s; }
-  .pow-item.active { border-color: #00e676; box-shadow: 0 0 10px #00e676; background: rgba(0, 230, 118, 0.2); }
+  .pow-item { border: 1px solid #7c43bd; padding: 10px; margin: 5px; border-radius: 8px; background: rgba(124, 67, 189, 0.1); cursor: pointer; color: white; transition: 0.2s; }
+  .pow-item.active { border-color: #00e676; box-shadow: 0 0 10px #00e676; background: rgba(0, 230, 118, 0.2); }
 </style>
 </head>
 <body>
@@ -71,49 +69,85 @@
 <div id="stars-bg"></div>
 
 <div id="main-menu" class="overlay-screen">
-  <h1>KING</h1>
-  <p class="subtitle">FINAL SYMBOLS</p>
-  <button class="menu-btn" onclick="newGame()">NUOVO INIZIO</button>
-  <button class="menu-btn" id="cont-btn" onclick="continueGame()">CONTINUA</button>
-  <button class="menu-btn" onclick="showScreen('level-menu')">LIVELLI</button>
-  <button class="menu-btn" onclick="askServerCode()" style="background: #b71c1c; border-color: #ff5252;">SCONTRO 1v1</button>
-  <button class="menu-btn" onclick="showScreen('stats-menu')">PROGRESSI E DATI</button>
-  <button class="menu-btn" onclick="showScreen('settings-menu')">IMPOSTAZIONI</button>
+  <h1>KING</h1>
+  <p class="subtitle">FINAL SYMBOLS</p>
+  <button class="menu-btn" onclick="newGame()">NUOVO INIZIO</button>
+  <button class="menu-btn" id="cont-btn" onclick="continueGame()">CONTINUA</button>
+  <button class="menu-btn" onclick="showScreen('level-menu')">LIVELLI</button>
+  <button class="menu-btn" onclick="askServerCode()" style="background: #b71c1c; border-color: #ff5252;">SCONTRO 1v1</button>
+  <button class="menu-btn" onclick="showScreen('stats-menu')">PROGRESSI E DATI</button>
+  <button class="menu-btn" onclick="showScreen('settings-menu')">IMPOSTAZIONI</button>
 </div>
 
 <div id="powerup-menu" class="overlay-screen hide">
-  <h1>POTENZIAMENTI SFIDA</h1>
-  <div class="stats-box" style="width: 350px; text-align: center;">
-    <div class="pow-item active" onclick="selectSkill(this, 'speed')">⚡ VELOCITÀ</div>
-    <div class="pow-item" onclick="selectSkill(this, 'shield')">🛡️ SCUDO REALE</div>
-    <div class="pow-item" onclick="selectSkill(this, 'power')">🔥 COLPO ESPLOSIVO</div>
-    <div class="pow-item" onclick="selectSkill(this, 'slow')">❄️ RALLENTAMENTO</div>
-  </div>
-  <button class="menu-btn" onclick="start1v1()">INIZIA BATTAGLIA</button>
-  <button class="menu-btn" onclick="showScreen('main-menu')" style="background:#222;">INDIETRO</button>
+  <h1>POTENZIAMENTI SFIDA</h1>
+  <div class="stats-box" style="width: 350px; text-align: center;">
+    <div class="pow-item active" onclick="selectSkill(this, 'speed')">⚡ VELOCITÀ</div>
+    <div class="pow-item" onclick="selectSkill(this, 'shield')">🛡️ SCUDO REALE</div>
+    <div class="pow-item" onclick="selectSkill(this, 'power')">🔥 COLPO ESPLOSIVO</div>
+    <div class="pow-item" onclick="selectSkill(this, 'slow')">❄️ RALLENTAMENTO</div>
+  </div>
+  <button class="menu-btn" onclick="start1v1()">INIZIA BATTAGLIA</button>
+  <button class="menu-btn" onclick="showScreen('main-menu')" style="background:#222;">INDIETRO</button>
+</div>
+
+<div id="settings-menu" class="overlay-screen hide">
+  <h1>IMPOSTAZIONI</h1>
+  <button class="menu-btn" id="diff-0" onclick="setDifficulty(0)">FACILE</button>
+  <button class="menu-btn active" id="diff-1" onclick="setDifficulty(1)">NORMALE</button>
+  <button class="menu-btn" id="diff-2" onclick="setDifficulty(2)">DIFFICILE</button>
+  <button class="menu-btn" onclick="showScreen('main-menu')" style="background:#222; margin-top:20px;">INDIETRO</button>
+</div>
+
+<div id="level-menu" class="overlay-screen hide">
+  <h1>SELEZIONA REGNO</h1>
+  <div id="lvl-grid"></div>
+  <button class="menu-btn" onclick="showScreen('main-menu')" style="background:#222; margin-top:20px;">INDIETRO</button>
+</div>
+
+<div id="stats-menu" class="overlay-screen hide">
+  <h1>PROGRESSI DATI</h1>
+  <div class="stats-box">
+    <p>Regni Sbloccati: <span id="stat-lvls" style="color:#bb86fc">1/10</span></p>
+    <p>Boss Sconfitti: <span id="stat-boss" style="color:#bb86fc">0</span></p>
+    <p>Morti Totali: <span id="stat-deaths" style="color:#bb86fc">0</span></p>
+  </div>
+  <button class="menu-btn" onclick="resetSave()" style="background:#b71c1c; font-size: 0.8rem; width: 200px;">RESET DATI</button>
+  <button class="menu-btn" onclick="showScreen('main-menu')" style="background:#222; margin-top:10px;">INDIETRO</button>
+</div>
+
+<div id="win-screen" class="overlay-screen hide">
+  <h1 style="color:#ffeb3b">VITTORIA!</h1>
+  <button class="menu-btn" onclick="nextLevel()">PROSSIMO LIVELLO</button>
+  <button class="menu-btn" onclick="location.reload()">MENU</button>
+</div>
+
+<div id="end-screen" class="overlay-screen hide">
+  <h1>SCONFITTO</h1>
+  <button class="menu-btn" onclick="retryLevel()">RIPROVA</button>
+  <button class="menu-btn" onclick="location.reload()">MENU</button>
 </div>
 
 <div id="game-container">
-  <div id="ui-bar">
-    <div class="ui-element">HP: <span id="health-ui">♥♥♥♥♥</span></div>
-    <div class="ui-element">LVL: <span id="lvl-ui">1</span> | <span id="weapon-ui"></span></div>
-    <button class="ui-element" style="color: white; pointer-events:auto;" onclick="location.reload()">Esci</button>
-  </div>
-  <div id="world">
-    <div id="player"><div id="sword">⚔️</div></div>
-    <div id="player2"></div>
-  </div>
-  <div class="controls">
-    <div class="joystick-area" id="joyArea"><div id="knob"></div></div>
-    <div class="btn-group">
-      <button class="action-btn" style="background:rgba(76, 175, 80, 0.6)" id="btnAtk">⚔️</button>
-      <button class="action-btn" style="background:rgba(255, 51, 102, 0.6)" id="btnJmp">⬆️</button>
-    </div>
-  </div>
+  <div id="ui-bar">
+    <div class="ui-element">HP: <span id="health-ui">♥♥♥♥♥</span></div>
+    <div class="ui-element">LVL: <span id="lvl-ui">1</span> | <span id="weapon-ui"></span></div>
+    <button class="ui-element" style="color: white; pointer-events:auto;" onclick="location.reload()">Esci</button>
+  </div>
+  <div id="world">
+    <div id="player"><div id="sword">⚔️</div></div>
+    <div id="player2"></div>
+  </div>
+  <div class="controls">
+    <div class="joystick-area" id="joyArea"><div id="knob"></div></div>
+    <div class="btn-group">
+      <button class="action-btn" style="background:rgba(76, 175, 80, 0.6)" id="btnAtk">⚔️</button>
+      <button class="action-btn" style="background:rgba(255, 51, 102, 0.6)" id="btnJmp">⬆️</button>
+    </div>
+  </div>
 </div>
 
 <script>
-// --- LOGICA SERVER E SOCKET ---
 const socket = io();
 let currentRoom = null;
 let enemySlowed = false;
@@ -122,206 +156,187 @@ let state = 'MENU', currentLevel = 1, unlockedLevel = 1, difficulty = 1;
 let px, py, vx, vy, health, stats = { deaths: 0, bossKills: 0 };
 let onGround = false, moveDir = 0, scrollX = 0, holdingJump = false, isAttacking = false;
 let projectiles = [], bosses = [], fountain = null;
-let is1v1 = false, activeSkill = 'speed'; 
+let is1v1 = false, activeSkill = 'speed'; 
 
 function initControls() {
-  // ... (Tua funzione originale initControls) ...
-  const btnJmp = document.getElementById('btnJmp');
-  const btnAtk = document.getElementById('btnAtk');
-  const joyArea = document.getElementById('joyArea');
-  const knob = document.getElementById('knob');
-  btnJmp.onpointerdown = () => { if(onGround) { vy = -17; onGround = false; holdingJump = true; } };
-  btnJmp.onpointerup = () => { holdingJump = false; };
-  btnAtk.onpointerdown = () => { attack(); };
-  joyArea.onpointermove = (e) => {
-    if(e.buttons > 0) {
-      let rect = joyArea.getBoundingClientRect();
-      let x = e.clientX - (rect.left + rect.width/2);
-      moveDir = Math.max(-1, Math.min(1, x / 40));
-      knob.style.left = (50 + moveDir * 30) + '%';
-    }
-  };
-  joyArea.onpointerup = () => { moveDir = 0; knob.style.left = '50%'; };
+  const btnJmp = document.getElementById('btnJmp');
+  const btnAtk = document.getElementById('btnAtk');
+  const joyArea = document.getElementById('joyArea');
+  const knob = document.getElementById('knob');
+  btnJmp.onpointerdown = () => { if(onGround) { vy = -17; onGround = false; holdingJump = true; } };
+  btnJmp.onpointerup = () => { holdingJump = false; };
+  btnAtk.onpointerdown = () => { attack(); };
+  joyArea.onpointermove = (e) => {
+    if(e.buttons > 0) {
+      let rect = joyArea.getBoundingClientRect();
+      let x = e.clientX - (rect.left + rect.width/2);
+      moveDir = Math.max(-1, Math.min(1, x / 40));
+      knob.style.left = (50 + moveDir * 30) + '%';
+    }
+  };
+  joyArea.onpointerup = () => { moveDir = 0; knob.style.left = '50%'; };
 }
 
 function selectSkill(el, skill) {
-  document.querySelectorAll('.pow-item').forEach(item => item.classList.remove('active'));
-  el.classList.add('active');
-  activeSkill = skill;
+  document.querySelectorAll('.pow-item').forEach(item => item.classList.remove('active'));
+  el.classList.add('active');
+  activeSkill = skill;
 }
 
 function askServerCode() {
-    let key = prompt("Crea chiave stanza (o inserisci quella dell'amico):");
-    if(key) {
-        currentRoom = key;
-        socket.emit('joinRoom', key);
-        showScreen('powerup-menu');
-    }
+  let key = prompt("Crea chiave stanza (o inserisci quella dell'amico):");
+  if(key) {
+    currentRoom = key;
+    socket.emit('joinRoom', key);
+    showScreen('powerup-menu');
+  }
 }
 
 function start1v1() {
-    is1v1 = true;
-    startPlaying();
-    document.getElementById('player2').style.display = 'block';
+  is1v1 = true;
+  startPlaying();
+  document.getElementById('player2').style.display = 'block';
 }
 
-// --- LOGICA RICEZIONE SERVER (MODIFICATA PER SYNC Y) ---
+/* FIX 1: Ricezione coordinata Y per evitare fluttuazione */
 socket.on('enemyMove', (data) => {
-    const p2 = document.getElementById('player2');
-    if(p2) {
-        p2.style.left = data.x + 'px';
-        p2.style.top = data.y + 'px'; // FIX: Riceve la Y esatta per evitare fluttuazione
-        if(data.dir !== 0) p2.style.transform = (data.dir > 0) ? 'scaleX(1)' : 'scaleX(-1)';
-    }
+  const p2 = document.getElementById('player2');
+  if(p2) {
+    p2.style.left = data.x + 'px';
+    p2.style.top = data.y + 'px'; 
+    if(data.dir !== 0) p2.style.transform = (data.dir > 0) ? 'scaleX(1)' : 'scaleX(-1)';
+  }
 });
 
+/* FIX 2: Calibrazione collisione attacco 1vs1 */
 socket.on('enemyAttack', (data) => {
-    let dist = Math.abs(px - data.x);
-    let distY = Math.abs(py - data.y);
-    
-    if(data.skill === 'slow' && dist < 300) {
-        enemySlowed = true;
-        setTimeout(() => { enemySlowed = false; }, 2000);
-    }
-
-    if(dist < 70 && distY < 50) {
-        if(activeSkill === 'shield' && Math.random() > 0.5) return;
-        health--;
-        updateHearts();
-        if(health <= 0) {
-            showScreen('end-screen');
-            state = 'MENU';
-        }
-    }
+  let dist = Math.abs(px - data.x);
+  let distY = Math.abs(py - data.y);
+  if(data.skill === 'slow' && dist < 300) {
+    enemySlowed = true;
+    setTimeout(() => { enemySlowed = false; }, 2000);
+  }
+  if(dist < 75 && distY < 65) {
+    if(activeSkill === 'shield' && Math.random() > 0.5) return;
+    health--;
+    updateHearts();
+    if(health <= 0) { showScreen('end-screen'); state = 'MENU'; }
+  }
 });
 
 function updateHearts() {
-    let hStr = "";
-    for(let i=0; i<5; i++) hStr += (i < health) ? "♥" : "♡";
-    document.getElementById('health-ui').innerText = hStr;
+  let hStr = "";
+  for(let i=0; i<5; i++) hStr += (i < health) ? "♥" : "♡";
+  document.getElementById('health-ui').innerText = hStr;
 }
 
 function loadLevel(n) {
-  // ... (Tua logica originale loadLevel) ...
-  const config = levelConfigs[n]; 
-  const world = document.getElementById('world');
-  world.querySelectorAll('.platform, .boss, .projectile, #flag, .fountain').forEach(e => e.remove());
-  const groundY = 500; 
-  if (is1v1) {
-    const arena = document.createElement('div');
-    arena.className = 'platform';
-    arena.style.cssText = `width: 8000px; height: 100px; left: 0; top: ${groundY}px;`;
-    world.appendChild(arena);
-    px = 300; py = groundY - 60;
-  } else {
-    const plats = [{w:1500, h:100, l:0, t:groundY}, {w:1000, h:100, l:2700, t:groundY}, {w:1000, h:100, l:5300, t:groundY}, {w:1500, h:100, l:7800, t:groundY}];
-    for(let j=0; j<25; j++) plats.push({ w: 250, h: 35, l: 1600 + (j * 400), t: (groundY - 150) + (Math.sin(j) * 100) });
-    plats.forEach(p => {
-      const d = document.createElement('div'); d.className = 'platform';
-      d.style.width = p.w+'px'; d.style.height = p.h+'px'; d.style.left = p.l+'px'; d.style.top = p.t+'px';
-      world.appendChild(d);
-    });
-    bosses = config.bosses.map(b => {
-      const d = document.createElement('div'); d.id = b.id; d.className = 'boss';
-      d.style.left = b.x+'px'; d.style.top = (groundY - 140)+'px'; d.style.borderColor = config.bColor; d.innerHTML = (n === 10 ? '👑' : '👾');
-      world.appendChild(d); return {...b, hp: b.hp, lastShot: 0};
-    });
-    px = 150; py = groundY - 60;
-  }
+  const config = levelConfigs[n]; 
+  const world = document.getElementById('world');
+  world.querySelectorAll('.platform, .boss, .projectile, #flag, .fountain').forEach(e => e.remove());
+  const groundY = 500; 
+  if (is1v1) {
+    const arena = document.createElement('div');
+    arena.className = 'platform';
+    arena.style.cssText = `width: 8000px; height: 100px; left: 0; top: ${groundY}px;`;
+    world.appendChild(arena);
+    px = 300; py = groundY - 58;
+  } else {
+    const plats = [{w:1500, h:100, l:0, t:groundY}, {w:1000, h:100, l:2700, t:groundY}, {w:1000, h:100, l:5300, t:groundY}, {w:1500, h:100, l:7800, t:groundY}];
+    for(let j=0; j<25; j++) plats.push({ w: 250, h: 35, l: 1600 + (j * 400), t: (groundY - 150) + (Math.sin(j) * 100) });
+    plats.forEach(p => {
+      const d = document.createElement('div'); d.className = 'platform';
+      d.style.width = p.w+'px'; d.style.height = p.h+'px'; d.style.left = p.l+'px'; d.style.top = p.t+'px';
+      world.appendChild(d);
+    });
+    bosses = config.bosses.map(b => {
+      const d = document.createElement('div'); d.id = b.id; d.className = 'boss';
+      d.style.left = b.x+'px'; d.style.top = (groundY - 140)+'px'; d.style.borderColor = config.bColor; d.innerHTML = (n === 10 ? '👑' : '👾');
+      world.appendChild(d); return {...b, hp: b.hp, lastShot: 0};
+    });
+    px = 150; py = groundY - 58;
+  }
 }
 
 function update() {
-  if (state === 'PLAYING') {
-    let speedMult = (activeSkill === 'speed') ? 1.8 : 1.1;
-    if(enemySlowed) speedMult *= 0.5;
+  if (state === 'PLAYING') {
+    let speedMult = (activeSkill === 'speed') ? 1.8 : 1.1;
+    if(enemySlowed) speedMult *= 0.5;
+    vx += moveDir * speedMult; vx *= 0.88;
+    let curGrav = (vy < 0 && holdingJump) ? 0.38 : 0.85;
+    vy += curGrav; px += vx; py += vy;
+    if (px < 0) { px = 0; vx = 0; }
+    onGround = false;
+    document.querySelectorAll('.platform').forEach(pl => {
+      let pL = parseInt(pl.style.left), pT = parseInt(pl.style.top), pW = parseInt(pl.style.width);
+      if (vy >= 0 && px + 35 > pL && px < pL + pW && py + 58 >= pT && py + 58 <= pT + 15) { 
+        py = pT - 58; vy = 0; onGround = true; 
+      }
+    });
 
-    vx += moveDir * speedMult; vx *= 0.88;
-    let curGrav = (vy < 0 && holdingJump) ? 0.38 : 0.85;
-    vy += curGrav; px += vx; py += vy;
+    /* FIX 3: Invio anche coordinata Y */
+    if(is1v1) { socket.emit('move', { x: px, y: py, dir: moveDir }); }
 
-    if (px < 0) { px = 0; vx = 0; }
-    
-    onGround = false;
-    document.querySelectorAll('.platform').forEach(pl => {
-      let pL = parseInt(pl.style.left), pT = parseInt(pl.style.top), pW = parseInt(pl.style.width);
-      if (vy >= 0 && px + 35 > pL && px < pL + pW && py + 58 >= pT && py + 58 <= pT + 15) { 
-        py = pT - 58; vy = 0; onGround = true; 
-      }
-    });
-
-    // FIX: Invio posizione X e Y per sincronizzazione
-    if(is1v1) {
-        socket.emit('move', { x: px, y: py, dir: moveDir });
-    }
-
-    let targetX = -px + (window.innerWidth / 2.5);
-    scrollX += (targetX - scrollX) * 0.1;
-    if(scrollX > 0) scrollX = 0;
-
-    document.getElementById('world').style.transform = `translateX(${scrollX}px)`;
-    const pEl = document.getElementById('player'); pEl.style.left = px + 'px'; pEl.style.top = py + 'px';
-    if(moveDir !== 0) pEl.style.transform = (moveDir > 0) ? 'scaleX(1)' : 'scaleX(-1)';
-    
-    if(py > 1000) { stats.deaths++; startPlaying(); }
-  }
-  requestAnimationFrame(update);
+    let targetX = -px + (window.innerWidth / 2.5);
+    scrollX += (targetX - scrollX) * 0.1;
+    if(scrollX > 0) scrollX = 0;
+    document.getElementById('world').style.transform = `translateX(${scrollX}px)`;
+    const pEl = document.getElementById('player'); pEl.style.left = px + 'px'; pEl.style.top = py + 'px';
+    if(moveDir !== 0) pEl.style.transform = (moveDir > 0) ? 'scaleX(1)' : 'scaleX(-1)';
+    if(py > 1000) { stats.deaths++; startPlaying(); }
+  }
+  requestAnimationFrame(update);
 }
 
-function attack() { 
-  // ... (Tua funzione originale attack) ...
-  if(isAttacking) return; 
-  isAttacking = true; 
-  const s = document.getElementById('sword');
-  s.classList.add('sword-anim'); 
-  if(is1v1) { socket.emit('attack', { x: px, y: py, skill: activeSkill }); }
-  let range = (activeSkill === 'power') ? 250 : 150;
-  bosses.forEach((b, i) => {
-    if(Math.abs(px - b.x) < range) {
-      b.hp -= (activeSkill === 'power' ? 10 : 5);
-      if(b.hp <= 0) {
-        let el = document.getElementById(b.id);
-        if(el) el.remove();
-        stats.bossKills++;
-      }
-    }
-  });
-  setTimeout(() => { s.classList.remove('sword-anim'); isAttacking = false; }, 200); 
+function attack() { 
+  if(isAttacking) return; 
+  isAttacking = true; 
+  const s = document.getElementById('sword');
+  s.classList.add('sword-anim'); 
+  if(is1v1) { socket.emit('attack', { x: px, y: py, skill: activeSkill }); }
+  let range = (activeSkill === 'power') ? 250 : 150;
+  bosses.forEach((b, i) => {
+    if(Math.abs(px - b.x) < range) {
+      b.hp -= (activeSkill === 'power' ? 10 : 5);
+      if(b.hp <= 0) {
+        let el = document.getElementById(b.id);
+        if(el) el.remove();
+        stats.bossKills++;
+      }
+    }
+  });
+  setTimeout(() => { s.classList.remove('sword-anim'); isAttacking = false; }, 200); 
 }
-
-// ... (Tutto il resto del tuo codice: weaponData, startPlaying, showScreen, saveData ecc. rimane identico) ...
 
 const weaponData = [{n:"Spada",icon:"⚔️"},{n:"Ascia",icon:"🪓"},{n:"Lancia",icon:"🔱"},{n:"Martello",icon:"🔨"},{n:"Arco",icon:"🏹"},{n:"Magia",icon:"🪄"},{n:"Daga",icon:"🗡️"},{n:"Shuriken",icon:"🎯"},{n:"Fustigatore",icon:"⛓️"},{n:"Scettro Reale",icon:"👑"}];
 const levelConfigs = {}; for(let i=1; i<=10; i++) levelConfigs[i] = { weapon: weaponData[i-1], bColor: `hsl(${i*35},70%,50%)`, bosses: [{id:'b1',x:3200,hp:20},{id:'b2',x:5800,hp:30}]};
-
-function startPlaying() { 
-  state = 'PLAYING'; health = 5; vx = 0; vy = 0; 
-  updateHearts();
-  const config = levelConfigs[currentLevel]; 
-  document.getElementById('weapon-ui').innerText = config.weapon.n; 
-  document.getElementById('sword').innerText = config.weapon.icon; 
-  document.getElementById('lvl-ui').innerText = currentLevel; 
-  showScreen('none'); 
-  document.getElementById('game-container').style.display = 'block'; 
-  loadLevel(currentLevel); 
+function startPlaying() { 
+  state = 'PLAYING'; health = 5; vx = 0; vy = 0; 
+  updateHearts();
+  const config = levelConfigs[currentLevel]; 
+  document.getElementById('weapon-ui').innerText = config.weapon.n; 
+  document.getElementById('sword').innerText = config.weapon.icon; 
+  document.getElementById('lvl-ui').innerText = currentLevel; 
+  showScreen('none'); 
+  document.getElementById('game-container').style.display = 'block'; 
+  loadLevel(currentLevel); 
 }
-
 function showScreen(id) { document.querySelectorAll('.overlay-screen').forEach(s => s.classList.add('hide')); if(id !== 'none') { document.getElementById(id).classList.remove('hide'); updateUIStats(); } }
 function newGame() { is1v1 = false; activeSkill='speed'; unlockedLevel = 1; stats = { deaths: 0, bossKills: 0 }; saveData(); currentLevel = 1; startPlaying(); }
 function setDifficulty(d) { difficulty = d; }
-function updateUIStats() { 
-  document.getElementById('stat-lvls').innerText = unlockedLevel + "/10"; 
-  document.getElementById('stat-boss').innerText = stats.bossKills; 
-  document.getElementById('stat-deaths').innerText = stats.deaths; 
-  const grid = document.getElementById('lvl-grid'); grid.innerHTML = '';
-  for(let i=1; i<=10; i++) {
-    const b = document.createElement('button'); b.className = 'menu-btn'; b.style.width = '130px'; b.innerText = "REGNO " + i; b.disabled = i > unlockedLevel;
-    b.onclick = () => { currentLevel = i; startPlaying(); }; grid.appendChild(b);
-  }
+function updateUIStats() { 
+  document.getElementById('stat-lvls').innerText = unlockedLevel + "/10"; 
+  document.getElementById('stat-boss').innerText = stats.bossKills; 
+  document.getElementById('stat-deaths').innerText = stats.deaths; 
+  const grid = document.getElementById('lvl-grid'); grid.innerHTML = '';
+  for(let i=1; i<=10; i++) {
+    const b = document.createElement('button'); b.className = 'menu-btn'; b.style.width = '130px'; b.innerText = "REGNO " + i; b.disabled = i > unlockedLevel;
+    b.onclick = () => { currentLevel = i; startPlaying(); }; grid.appendChild(b);
+  }
 }
 function saveData() { localStorage.setItem('king_save_v2', JSON.stringify({ unlockedLevel, stats })); }
 function loadData() { const save = localStorage.getItem('king_save_v2'); if(save) { const data = JSON.parse(save); unlockedLevel = data.unlockedLevel || 1; stats = data.stats || stats; } }
-
-loadData(); 
+loadData(); 
 initControls();
 update();
 </script>
