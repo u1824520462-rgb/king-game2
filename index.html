@@ -6,13 +6,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
 <script src="/socket.io/socket.io.js"></script>
 <style>
-  /* --- STILE ORIGINALE --- */
+  /* --- FIX FLUTTUAZIONE: Rimosso position fixed dal body che rompeva la fisica --- */
   * { touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; box-sizing: border-box; }
-  body { margin: 0; height: 100vh; width: 100vw; overflow: hidden; background: #020005; font-family: 'Segoe UI', sans-serif; color: #e0c0ff; }
+  html, body { 
+    margin: 0; 
+    padding: 0; 
+    width: 100%; 
+    height: 100%; 
+    overflow: hidden; 
+    background: #020005; 
+    font-family: 'Segoe UI', sans-serif; 
+    color: #e0c0ff;
+    /* Usiamo overflow hidden invece di fixed per non buggare la gravità */
+  }
   
-  /* FIX DISPLAY GOOGLE/MOBILE (Aggiunto solo questo per i tasti) */
-  #game-container { position: fixed; inset: 0; width: 100%; height: 100%; display: none; overflow: hidden; }
-
   @media screen and (orientation: portrait) {
     #game-container { display: none !important; }
     body::after { 
@@ -34,12 +41,14 @@
   .menu-btn:disabled { background: #222; border-color: #444; opacity: 0.5; cursor: default; }
   .menu-btn.active { background: #00e676; border-color: white; color: black; font-weight: bold; }
 
+  /* FIX: Il container deve essere absolute per allinearsi al calcolo py = groundY */
+  #game-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; overflow: hidden; }
   #world { position: absolute; top: 0; left: 0; width: 15000px; height: 100%; transition: transform 0.1s linear; }
   
   #player { position: absolute; width: 42px; height: 58px; background: #ce93d8; border-radius: 8px; border: 3px solid #f3e5f5; z-index: 10; box-shadow: 0 0 20px rgba(206, 147, 216, 0.6); }
   #player2 { position: absolute; width: 42px; height: 58px; background: #4fc3f7; border-radius: 8px; border: 3px solid #e1f5fe; z-index: 9; display: none; box-shadow: 0 0 20px rgba(79, 195, 247, 0.6); }
 
-  #sword, #sword-p2 { position: absolute; width: 50px; height: 50px; display: none; z-index: 11; font-size: 35px; top: -5px; left: 25px; transform-origin: left center; }
+  #sword, .enemy-sword { position: absolute; width: 50px; height: 50px; display: none; z-index: 11; font-size: 35px; top: -5px; left: 25px; transform-origin: left center; }
   .sword-anim { display: flex !important; align-items: center; justify-content: center; animation: slash 0.2s ease-out; }
   @keyframes slash { 0% { transform: rotate(-60deg); } 100% { transform: rotate(60deg); } }
 
@@ -104,7 +113,7 @@
   </div>
   <div id="world">
     <div id="player"><div id="sword">⚔️</div></div>
-    <div id="player2"><div id="sword-p2">⚔️</div></div>
+    <div id="player2"><div id="enemy-sword" class="enemy-sword">⚔️</div></div>
   </div>
   <div class="controls">
     <div class="joystick-area" id="joyArea"><div id="knob"></div></div>
@@ -125,17 +134,15 @@ let px, py, vx, vy, health, stats = { deaths: 0, bossKills: 0 };
 let onGround = false, moveDir = 0, scrollX = 0, holdingJump = false, isAttacking = false;
 let projectiles = [], bosses = [], is1v1 = false, activeSkill = 'speed'; 
 
-// --- GESTIONE 1v1 (Sincronizzazione Danno e Animazione) ---
 socket.on('enemyAttack', (data) => {
-    const s2 = document.getElementById('sword-p2');
-    if(s2) {
-        s2.classList.add('sword-anim');
-        setTimeout(() => s2.classList.remove('sword-anim'), 200);
+    const es = document.getElementById('enemy-sword');
+    if(es) {
+      es.classList.add('sword-anim');
+      setTimeout(() => es.classList.remove('sword-anim'), 200);
     }
-    // Controllo se l'altro giocatore mi ha colpito
-    let dx = Math.abs(px - data.x);
-    let dy = Math.abs(py - data.y);
-    if(dx < 85 && dy < 60) takeDamage();
+    let dist = Math.abs(px - data.x);
+    let distY = Math.abs(py - data.y);
+    if(dist < 90 && distY < 70) takeDamage();
 });
 
 socket.on('enemyMove', (data) => {
@@ -153,11 +160,9 @@ function initControls() {
   const btnAtk = document.getElementById('btnAtk');
   const joyArea = document.getElementById('joyArea');
   const knob = document.getElementById('knob');
-
   btnJmp.onpointerdown = (e) => { e.preventDefault(); if(onGround) { vy = -19.5; onGround = false; holdingJump = true; } };
   btnJmp.onpointerup = () => { holdingJump = false; };
   btnAtk.onpointerdown = (e) => { e.preventDefault(); attack(); };
-
   joyArea.onpointermove = (e) => {
     if(e.buttons > 0 || e.pointerType === 'touch') {
       let rect = joyArea.getBoundingClientRect();
@@ -174,7 +179,6 @@ function attack() {
   isAttacking = true; 
   const s = document.getElementById('sword');
   s.classList.add('sword-anim'); 
-  
   if(is1v1) socket.emit('attack', { x: px, y: py });
 
   let range = (activeSkill === 'power') ? 220 : 150;
@@ -198,14 +202,12 @@ function loadLevel(n) {
     world.appendChild(arena);
     px = 300; py = groundY - 60;
   } else {
-    // --- STRUTTURA LIVELLI ORIGINALE ---
     const plats = [{w:1500, h:100, l:0, t:groundY}, {w:1200, h:100, l:2700, t:groundY}, {w:1500, h:100, l:5400, t:groundY}];
     plats.forEach(p => {
       const d = document.createElement('div'); d.className = 'platform';
       d.style.width = p.w+'px'; d.style.height = p.h+'px'; d.style.left = p.l+'px'; d.style.top = p.t+'px';
       world.appendChild(d);
     });
-    // --- BOSS ORIGINALI MA CON HP RIDOTTI COME RICHIESTO ---
     bosses = [{id:'b1',x:3200,hp:10},{id:'b2',x:5800,hp:15}].map(b => {
       const d = document.createElement('div'); d.id = b.id; d.className = 'boss';
       d.style.left = b.x+'px'; d.style.top = (groundY - 140)+'px'; d.innerHTML = '👾';
@@ -219,15 +221,12 @@ function update() {
   if (state === 'PLAYING') {
     vx += moveDir * ((activeSkill === 'speed') ? 1.8 : 1.1); vx *= 0.88;
     vy += (vy < 0 && holdingJump) ? 0.38 : 0.85; px += vx; py += vy;
-    
     onGround = false;
     document.querySelectorAll('.platform').forEach(pl => {
       let pL = parseInt(pl.style.left), pT = parseInt(pl.style.top), pW = parseInt(pl.style.width);
       if (vy >= 0 && px + 38 > pL && px + 4 < pL + pW && py + 58 >= pT && py + 58 <= pT + 30) { py = pT - 58; vy = 0; onGround = true; }
     });
-
     if(is1v1) socket.emit('move', { x: px, y: py, dir: moveDir });
-
     let targetX = -px + (window.innerWidth / 3);
     scrollX += (targetX - scrollX) * 0.1;
     if(scrollX > 0) scrollX = 0;
@@ -243,7 +242,7 @@ function update() {
 function takeDamage() { health--; updateHearts(); if(health <= 0) { state = 'MENU'; showScreen('end-screen'); } }
 function updateHearts() { let hStr = ""; for(let i=0; i<5; i++) hStr += (i < health) ? "♥" : "♡"; document.getElementById('health-ui').innerText = hStr; }
 function selectSkill(el, skill) { document.querySelectorAll('.pow-item').forEach(item => item.classList.remove('active')); el.classList.add('active'); activeSkill = skill; }
-function askServerCode() { let key = prompt("Codice:"); if(key) { socket.emit('joinRoom', key); showScreen('powerup-menu'); } }
+function askServerCode() { let key = prompt("Codice:"); if(key) { currentRoom = key; socket.emit('joinRoom', key); showScreen('powerup-menu'); } }
 function start1v1() { is1v1 = true; startPlaying(); document.getElementById('player2').style.display = 'block'; }
 function startPlaying() { state = 'PLAYING'; health = 5; updateHearts(); showScreen('none'); document.getElementById('game-container').style.display = 'block'; loadLevel(currentLevel); }
 function newGame() { is1v1 = false; currentLevel = 1; startPlaying(); }
