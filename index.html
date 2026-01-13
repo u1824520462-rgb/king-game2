@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <title>King Final Symbols - Ultimate Edition</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, orientation=landscape"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
 <script src="/socket.io/socket.io.js"></script>
 <style>
-  /* --- STILE ORIGINALE RIMASTO INVARIATO --- */
+  /* --- STILE ORIGINALE CON FIX PER DISPLAY --- */
   * { touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; box-sizing: border-box; }
   body { margin: 0; height: 100vh; width: 100vw; overflow: hidden; background: #020005; font-family: 'Segoe UI', sans-serif; color: #e0c0ff; }
   
@@ -32,7 +32,7 @@
   .menu-btn.active { background: #00e676; border-color: white; color: black; font-weight: bold; }
 
   #game-container { position: relative; width: 100%; height: 100%; display: none; overflow: hidden; }
-  #world { position: absolute; top: 0; left: 0; width: 15000px; height: 100%; }
+  #world { position: absolute; top: 0; left: 0; width: 15000px; height: 100%; transition: transform 0.1s linear; }
   
   #player { position: absolute; width: 42px; height: 58px; background: #ce93d8; border-radius: 8px; border: 3px solid #f3e5f5; z-index: 10; box-shadow: 0 0 20px rgba(206, 147, 216, 0.6); }
   #player2 { position: absolute; width: 42px; height: 58px; background: #4fc3f7; border-radius: 8px; border: 3px solid #e1f5fe; z-index: 9; display: none; box-shadow: 0 0 20px rgba(79, 195, 247, 0.6); }
@@ -43,10 +43,8 @@
 
   .platform { position: absolute; background: linear-gradient(180deg, #311b92, #1a237e); border: 1px solid #7c43bd; border-radius: 4px; }
   .boss { position: absolute; width: 110px; height: 140px; border-radius: 15px; z-index: 5; border: 4px solid white; display: flex; align-items: center; justify-content: center; font-size: 40px; }
-  .projectile { position: absolute; width: 24px; height: 24px; border-radius: 50%; z-index: 9; display: flex; align-items: center; justify-content: center; font-size: 14px; transition: transform 0.1s; }
+  .projectile { position: absolute; width: 30px; height: 30px; border-radius: 50%; z-index: 9; display: flex; align-items: center; justify-content: center; font-size: 18px; }
   
-  .fountain { position: absolute; width: 80px; height: 100px; display: flex; align-items: center; justify-content: center; font-size: 50px; z-index: 8; text-shadow: 0 0 20px #00e5ff; transition: 0.5s; }
-
   #ui-bar { position: fixed; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; z-index: 100; pointer-events: none; }
   .ui-element { pointer-events: auto; background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 12px; border: 1px solid #7c43bd; font-weight: bold; }
 
@@ -148,7 +146,7 @@
 </div>
 
 <script>
-const socket = io();
+const socket = (typeof io !== 'undefined') ? io() : { emit:()=>{}, on:()=>{} };
 let currentRoom = null;
 let enemySlowed = false;
 
@@ -164,12 +162,13 @@ function initControls() {
   const joyArea = document.getElementById('joyArea');
   const knob = document.getElementById('knob');
 
-  btnJmp.onpointerdown = () => { if(onGround) { vy = -18; onGround = false; holdingJump = true; } };
+  // FIX SALTO MOBILE: Aumentato vigore salto e rimosso ritardo
+  btnJmp.onpointerdown = (e) => { e.preventDefault(); if(onGround) { vy = -19.5; onGround = false; holdingJump = true; } };
   btnJmp.onpointerup = () => { holdingJump = false; };
-  btnAtk.onpointerdown = () => { attack(); };
+  btnAtk.onpointerdown = (e) => { e.preventDefault(); attack(); };
 
   joyArea.onpointermove = (e) => {
-    if(e.buttons > 0) {
+    if(e.buttons > 0 || e.pointerType === 'touch') {
       let rect = joyArea.getBoundingClientRect();
       let x = e.clientX - (rect.left + rect.width/2);
       moveDir = Math.max(-1, Math.min(1, x / 40));
@@ -209,19 +208,6 @@ socket.on('enemyMove', (data) => {
     }
 });
 
-socket.on('enemyAttack', (data) => {
-    let dist = Math.abs(px - data.x);
-    let distY = Math.abs(py - data.y);
-    if(data.skill === 'slow' && dist < 300) {
-        enemySlowed = true;
-        setTimeout(() => { enemySlowed = false; }, 2000);
-    }
-    if(dist < 75 && distY < 60) {
-        if(activeSkill === 'shield' && Math.random() > 0.5) return;
-        takeDamage();
-    }
-});
-
 function updateHearts() {
     let hStr = "";
     for(let i=0; i<5; i++) hStr += (i < health) ? "♥" : "♡";
@@ -229,7 +215,7 @@ function updateHearts() {
 }
 
 function loadLevel(n) {
-  const config = levelConfigs[n]; 
+  const config = levelConfigs[n] || levelConfigs[1]; 
   const world = document.getElementById('world');
   world.querySelectorAll('.platform, .boss, .projectile, #flag, .fountain').forEach(e => e.remove());
   const groundY = 500; 
@@ -241,23 +227,24 @@ function loadLevel(n) {
     world.appendChild(arena);
     px = 300; py = groundY - 60;
   } else {
-    const plats = [{w:1500, h:100, l:0, t:groundY}, {w:1000, h:100, l:2700, t:groundY}, {w:1000, h:100, l:5300, t:groundY}, {w:1500, h:100, l:7800, t:groundY}];
-    for(let j=0; j<25; j++) plats.push({ w: 250, h: 35, l: 1600 + (j * 400), t: (groundY - 150) + (Math.sin(j) * 100) });
+    // FIX PIATTAFORME: Hitbox migliorata e distanze regolate per salto fluido
+    const plats = [{w:1500, h:100, l:0, t:groundY}, {w:1200, h:100, l:2700, t:groundY}, {w:1500, h:100, l:5400, t:groundY}, {w:2000, h:100, l:8000, t:groundY}];
+    for(let j=0; j<25; j++) plats.push({ w: 250, h: 45, l: 1600 + (j * 400), t: (groundY - 150) + (Math.sin(j) * 100) });
+    
     plats.forEach(p => {
       const d = document.createElement('div'); d.className = 'platform';
       d.style.width = p.w+'px'; d.style.height = p.h+'px'; d.style.left = p.l+'px'; d.style.top = p.t+'px';
       world.appendChild(d);
     });
+    
     bosses = config.bosses.map(b => {
       const d = document.createElement('div'); d.id = b.id; d.className = 'boss';
       d.style.left = b.x+'px'; d.style.top = (groundY - 140)+'px'; d.style.borderColor = config.bColor; d.innerHTML = (n === 10 ? '👑' : '👾');
-      world.appendChild(d); return {...b, hp: b.hp, lastShot: 0};
+      world.appendChild(d); return {...b, hp: b.hp, lastShot: 0, y: groundY - 140};
     });
-    px = 150; py = groundY - 60;
+    px = 150; py = groundY - 100;
   }
-  
-  scrollX = -px + (window.innerWidth / 2.5);
-  if(scrollX > 0) scrollX = 0;
+  scrollX = -px + (window.innerWidth / 3);
 }
 
 function update() {
@@ -267,59 +254,64 @@ function update() {
     vx += moveDir * speedMult; vx *= 0.88;
     let curGrav = (vy < 0 && holdingJump) ? 0.38 : 0.85;
     vy += curGrav; px += vx; py += vy;
+    
     if (px < 0) { px = 0; vx = 0; }
     
+    // FIX SECONDA PIATTAFORMA E COLLISIONI: Tolleranza hitbox aumentata
     onGround = false;
     document.querySelectorAll('.platform').forEach(pl => {
       let pL = parseInt(pl.style.left), pT = parseInt(pl.style.top), pW = parseInt(pl.style.width);
-      if (vy >= 0 && px + 35 > pL && px < pL + pW && py + 58 >= pT && py + 58 <= pT + 20) { 
+      if (vy >= 0 && px + 38 > pL && px + 4 < pL + pW && py + 58 >= pT && py + 58 <= pT + 30) { 
         py = pT - 58; vy = 0; onGround = true; 
       }
     });
 
     if(!is1v1) {
       bosses.forEach(b => {
-        if(Date.now() - b.lastShot > 2800 && Math.abs(px - b.x) < 800) {
+        // FIX RAGGIO D'AZIONE: Il boss spara solo se il player è entro 800px
+        let dist = Math.abs(px - b.x);
+        if(dist < 800 && Date.now() - b.lastShot > 2500) {
           shootProjectile(b.x, b.y + 50);
           b.lastShot = Date.now();
         }
       });
     }
 
+    // FIX PROIETTILI INSEGUITORI DINAMICI
     projectiles.forEach((p, i) => {
-      // LOGICA INSEGUIMENTO: Il proiettile vira verso il Player
       let dx = px - p.x;
-      let dy = py - p.y;
-      let angle = Math.atan2(dy, dx);
-      let pSpeed = p.baseSpeed;
-      p.vx = Math.cos(angle) * pSpeed;
-      p.vy = Math.sin(angle) * pSpeed;
-
-      p.x += p.vx;
-      p.y += p.vy;
+      let dy = (py + 30) - p.y;
+      let dist = Math.sqrt(dx*dx + dy*dy);
+      
+      // I proiettili curvano costantemente verso il player
+      p.vx = (dx / dist) * p.speed;
+      p.vy = (dy / dist) * p.speed;
+      
+      p.x += p.vx; p.y += p.vy;
       p.el.style.left = p.x + 'px';
       p.el.style.top = p.y + 'px';
 
-      if(Math.abs(p.x - px) < 30 && Math.abs(p.y - py) < 60) {
+      // Collisione proiettile
+      if(dist < 45) {
         takeDamage(); p.el.remove(); projectiles.splice(i, 1);
-      } else if (Math.abs(p.x - px) > 1200) {
+      } else if (dist > 1500) {
         p.el.remove(); projectiles.splice(i, 1);
       }
     });
 
     if(is1v1) socket.emit('move', { x: px, y: py, dir: moveDir });
 
-    let targetX = -px + (window.innerWidth / 2.5);
+    let targetX = -px + (window.innerWidth / 3);
     scrollX += (targetX - scrollX) * 0.1;
     if(scrollX > 0) scrollX = 0;
     document.getElementById('world').style.transform = `translateX(${scrollX}px)`;
-    const pEl = document.getElementById('player'); pEl.style.left = px + 'px'; pEl.style.top = py + 'px';
+    
+    const pEl = document.getElementById('player'); 
+    pEl.style.left = px + 'px'; pEl.style.top = py + 'px';
     if(moveDir !== 0) pEl.style.transform = (moveDir > 0) ? 'scaleX(1)' : 'scaleX(-1)';
     
     if(py > 1500 || health <= 0) { 
-      state = 'MENU'; 
-      stats.deaths++;
-      showScreen('end-screen'); 
+      state = 'MENU'; stats.deaths++; showScreen('end-screen'); 
     }
   }
   requestAnimationFrame(update);
@@ -329,27 +321,20 @@ function shootProjectile(x, y) {
   const el = document.createElement('div'); el.className = 'projectile';
   el.style.left = x + 'px'; el.style.top = y + 'px';
   
-  // VARIAZIONE IN BASE AL REGNO
   let bulletIcon = "✨";
   let bulletColor = "#ffeb3b";
-  let bulletSpeed = 4 + (currentLevel * 0.3);
-
-  if(currentLevel <= 3) { bulletIcon = "☄️"; bulletColor = "#ff5722"; }
-  else if(currentLevel <= 6) { bulletIcon = "🌑"; bulletColor = "#9c27b0"; }
-  else if(currentLevel <= 9) { bulletIcon = "❄️"; bulletColor = "#00e5ff"; }
-  else { bulletIcon = "🔥"; bulletColor = "#ff0000"; bulletSpeed = 8; }
+  if(currentLevel > 5) { bulletIcon = "🔥"; bulletColor = "#ff5252"; }
 
   el.innerHTML = bulletIcon;
   el.style.background = bulletColor;
   el.style.boxShadow = `0 0 15px ${bulletColor}`;
   
   document.getElementById('world').appendChild(el);
-  projectiles.push({el, x, y, vx: 0, vy: 0, baseSpeed: bulletSpeed});
+  projectiles.push({el, x, y, speed: 4.8 + (currentLevel * 0.35)});
 }
 
 function takeDamage() {
-  health--;
-  updateHearts();
+  health--; updateHearts();
   if(health <= 0) { state = 'MENU'; showScreen('end-screen'); }
 }
 
@@ -359,13 +344,12 @@ function attack() {
   const s = document.getElementById('sword');
   s.classList.add('sword-anim'); 
   if(is1v1) socket.emit('attack', { x: px, y: py, skill: activeSkill });
-  let range = (activeSkill === 'power') ? 250 : 150;
+  let range = (activeSkill === 'power') ? 220 : 150;
   bosses.forEach((b, i) => {
     if(Math.abs(px - b.x) < range) {
       b.hp -= (activeSkill === 'power' ? 10 : 5);
       if(b.hp <= 0) {
-        let el = document.getElementById(b.id);
-        if(el) el.remove();
+        document.getElementById(b.id)?.remove();
         stats.bossKills++;
       }
     }
@@ -377,9 +361,8 @@ const weaponData = [{n:"Spada",icon:"⚔️"},{n:"Ascia",icon:"🪓"},{n:"Lancia
 const levelConfigs = {}; for(let i=1; i<=10; i++) levelConfigs[i] = { weapon: weaponData[i-1], bColor: `hsl(${i*35},70%,50%)`, bosses: [{id:'b1',x:3200,hp:20},{id:'b2',x:5800,hp:30}]};
 
 function startPlaying() { 
-  state = 'PLAYING'; health = 5; vx = 0; vy = 0; 
-  updateHearts();
-  const config = levelConfigs[currentLevel]; 
+  state = 'PLAYING'; health = 5; vx = 0; vy = 0; updateHearts();
+  const config = levelConfigs[currentLevel] || levelConfigs[1]; 
   document.getElementById('weapon-ui').innerText = config.weapon.n; 
   document.getElementById('sword').innerText = config.weapon.icon; 
   document.getElementById('lvl-ui').innerText = currentLevel; 
@@ -389,7 +372,6 @@ function startPlaying() {
 }
 
 function retryLevel() { health = 5; startPlaying(); }
-
 function showScreen(id) { document.querySelectorAll('.overlay-screen').forEach(s => s.classList.add('hide')); if(id !== 'none') { document.getElementById(id).classList.remove('hide'); updateUIStats(); } }
 function newGame() { is1v1 = false; activeSkill='speed'; unlockedLevel = 1; stats = { deaths: 0, bossKills: 0 }; saveData(); currentLevel = 1; startPlaying(); }
 function continueGame() { loadData(); startPlaying(); }
