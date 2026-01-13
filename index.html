@@ -88,43 +88,6 @@
   <button class="menu-btn" onclick="showScreen('main-menu')" style="background:#222;">INDIETRO</button>
 </div>
 
-<div id="settings-menu" class="overlay-screen hide">
-  <h1>IMPOSTAZIONI</h1>
-  <button class="menu-btn" id="diff-0" onclick="setDifficulty(0)">FACILE</button>
-  <button class="menu-btn active" id="diff-1" onclick="setDifficulty(1)">NORMALE</button>
-  <button class="menu-btn" id="diff-2" onclick="setDifficulty(2)">DIFFICILE</button>
-  <button class="menu-btn" onclick="showScreen('main-menu')" style="background:#222; margin-top:20px;">INDIETRO</button>
-</div>
-
-<div id="level-menu" class="overlay-screen hide">
-  <h1>SELEZIONA REGNO</h1>
-  <div id="lvl-grid"></div>
-  <button class="menu-btn" onclick="showScreen('main-menu')" style="background:#222; margin-top:20px;">INDIETRO</button>
-</div>
-
-<div id="stats-menu" class="overlay-screen hide">
-  <h1>PROGRESSI DATI</h1>
-  <div class="stats-box">
-    <p>Regni Sbloccati: <span id="stat-lvls" style="color:#bb86fc">1/10</span></p>
-    <p>Boss Sconfitti: <span id="stat-boss" style="color:#bb86fc">0</span></p>
-    <p>Morti Totali: <span id="stat-deaths" style="color:#bb86fc">0</span></p>
-  </div>
-  <button class="menu-btn" onclick="resetSave()" style="background:#b71c1c; font-size: 0.8rem; width: 200px;">RESET DATI</button>
-  <button class="menu-btn" onclick="showScreen('main-menu')" style="background:#222; margin-top:10px;">INDIETRO</button>
-</div>
-
-<div id="win-screen" class="overlay-screen hide">
-  <h1 style="color:#ffeb3b">VITTORIA!</h1>
-  <button class="menu-btn" onclick="nextLevel()">PROSSIMO LIVELLO</button>
-  <button class="menu-btn" onclick="location.reload()">MENU</button>
-</div>
-
-<div id="end-screen" class="overlay-screen hide">
-  <h1>SCONFITTO</h1>
-  <button class="menu-btn" onclick="retryLevel()">RIPROVA</button>
-  <button class="menu-btn" onclick="location.reload()">MENU</button>
-</div>
-
 <div id="game-container">
   <div id="ui-bar">
     <div class="ui-element">HP: <span id="health-ui">♥♥♥♥♥</span></div>
@@ -230,6 +193,7 @@ function loadLevel(n) {
   const world = document.getElementById('world');
   world.querySelectorAll('.platform, .boss, .projectile, #flag, .fountain').forEach(e => e.remove());
   const groundY = 500; 
+  
   if (is1v1) {
     const arena = document.createElement('div');
     arena.className = 'platform';
@@ -251,6 +215,11 @@ function loadLevel(n) {
     });
     px = 150; py = groundY - 58;
   }
+  
+  // FIX DEFINITIVO TELECAMERA: Allinea istantaneamente la visuale allo spawn
+  scrollX = -px + (window.innerWidth / 2.5);
+  if(scrollX > 0) scrollX = 0;
+  document.getElementById('world').style.transform = `translateX(${scrollX}px)`;
 }
 
 function update() {
@@ -271,7 +240,6 @@ function update() {
 
     if(is1v1) { socket.emit('move', { x: px, y: py, dir: moveDir }); }
 
-    // GESTIONE TELECAMERA
     let targetX = -px + (window.innerWidth / 2.5);
     scrollX += (targetX - scrollX) * 0.1;
     if(scrollX > 0) scrollX = 0;
@@ -310,16 +278,8 @@ function attack() {
 const weaponData = [{n:"Spada",icon:"⚔️"},{n:"Ascia",icon:"🪓"},{n:"Lancia",icon:"🔱"},{n:"Martello",icon:"🔨"},{n:"Arco",icon:"🏹"},{n:"Magia",icon:"🪄"},{n:"Daga",icon:"🗡️"},{n:"Shuriken",icon:"🎯"},{n:"Fustigatore",icon:"⛓️"},{n:"Scettro Reale",icon:"👑"}];
 const levelConfigs = {}; for(let i=1; i<=10; i++) levelConfigs[i] = { weapon: weaponData[i-1], bColor: `hsl(${i*35},70%,50%)`, bosses: [{id:'b1',x:3200,hp:20},{id:'b2',x:5800,hp:30}]};
 
-// FIX UNIVERSALE PER TUTTE LE MODALITÀ
 function startPlaying() { 
   state = 'PLAYING'; health = 5; vx = 0; vy = 0; 
-  
-  // Reset immediato telecamera e coordinate iniziali per evitare bug visuale
-  scrollX = 0;
-  px = 150; 
-  py = 400; 
-  document.getElementById('world').style.transform = `translateX(0px)`;
-  
   updateHearts();
   const config = levelConfigs[currentLevel]; 
   document.getElementById('weapon-ui').innerText = config.weapon.n; 
