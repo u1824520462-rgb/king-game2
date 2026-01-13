@@ -43,10 +43,7 @@
 
   .platform { position: absolute; background: linear-gradient(180deg, #311b92, #1a237e); border: 1px solid #7c43bd; border-radius: 4px; }
   .boss { position: absolute; width: 110px; height: 140px; border-radius: 15px; z-index: 5; border: 4px solid white; display: flex; align-items: center; justify-content: center; font-size: 40px; }
-  .projectile { position: absolute; width: 24px; height: 24px; border-radius: 50%; z-index: 9; background: #ffeb3b; box-shadow: 0 0 15px #ffeb3b; display: flex; align-items: center; justify-content: center; font-size: 14px; }
   
-  .fountain { position: absolute; width: 80px; height: 100px; display: flex; align-items: center; justify-content: center; font-size: 50px; z-index: 8; text-shadow: 0 0 20px #00e5ff; transition: 0.5s; }
-
   #ui-bar { position: fixed; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; z-index: 100; pointer-events: none; }
   .ui-element { pointer-events: auto; background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 12px; border: 1px solid #7c43bd; font-weight: bold; }
 
@@ -198,7 +195,6 @@ function start1v1() {
   document.getElementById('player2').style.display = 'block';
 }
 
-/* FIX 1: Ricezione coordinata Y per evitare fluttuazione */
 socket.on('enemyMove', (data) => {
   const p2 = document.getElementById('player2');
   if(p2) {
@@ -208,7 +204,6 @@ socket.on('enemyMove', (data) => {
   }
 });
 
-/* FIX 2: Calibrazione collisione attacco 1vs1 */
 socket.on('enemyAttack', (data) => {
   let dist = Math.abs(px - data.x);
   let distY = Math.abs(py - data.y);
@@ -274,16 +269,20 @@ function update() {
       }
     });
 
-    /* FIX 3: Invio anche coordinata Y */
     if(is1v1) { socket.emit('move', { x: px, y: py, dir: moveDir }); }
 
+    // GESTIONE TELECAMERA
     let targetX = -px + (window.innerWidth / 2.5);
     scrollX += (targetX - scrollX) * 0.1;
     if(scrollX > 0) scrollX = 0;
+    
     document.getElementById('world').style.transform = `translateX(${scrollX}px)`;
-    const pEl = document.getElementById('player'); pEl.style.left = px + 'px'; pEl.style.top = py + 'px';
+    const pEl = document.getElementById('player'); 
+    pEl.style.left = px + 'px'; 
+    pEl.style.top = py + 'px';
+    
     if(moveDir !== 0) pEl.style.transform = (moveDir > 0) ? 'scaleX(1)' : 'scaleX(-1)';
-    if(py > 1000) { stats.deaths++; startPlaying(); }
+    if(py > 1500) { stats.deaths++; startPlaying(); }
   }
   requestAnimationFrame(update);
 }
@@ -310,8 +309,17 @@ function attack() {
 
 const weaponData = [{n:"Spada",icon:"⚔️"},{n:"Ascia",icon:"🪓"},{n:"Lancia",icon:"🔱"},{n:"Martello",icon:"🔨"},{n:"Arco",icon:"🏹"},{n:"Magia",icon:"🪄"},{n:"Daga",icon:"🗡️"},{n:"Shuriken",icon:"🎯"},{n:"Fustigatore",icon:"⛓️"},{n:"Scettro Reale",icon:"👑"}];
 const levelConfigs = {}; for(let i=1; i<=10; i++) levelConfigs[i] = { weapon: weaponData[i-1], bColor: `hsl(${i*35},70%,50%)`, bosses: [{id:'b1',x:3200,hp:20},{id:'b2',x:5800,hp:30}]};
+
+// FIX UNIVERSALE PER TUTTE LE MODALITÀ
 function startPlaying() { 
   state = 'PLAYING'; health = 5; vx = 0; vy = 0; 
+  
+  // Reset immediato telecamera e coordinate iniziali per evitare bug visuale
+  scrollX = 0;
+  px = 150; 
+  py = 400; 
+  document.getElementById('world').style.transform = `translateX(0px)`;
+  
   updateHearts();
   const config = levelConfigs[currentLevel]; 
   document.getElementById('weapon-ui').innerText = config.weapon.n; 
@@ -321,6 +329,7 @@ function startPlaying() {
   document.getElementById('game-container').style.display = 'block'; 
   loadLevel(currentLevel); 
 }
+
 function showScreen(id) { document.querySelectorAll('.overlay-screen').forEach(s => s.classList.add('hide')); if(id !== 'none') { document.getElementById(id).classList.remove('hide'); updateUIStats(); } }
 function newGame() { is1v1 = false; activeSkill='speed'; unlockedLevel = 1; stats = { deaths: 0, bossKills: 0 }; saveData(); currentLevel = 1; startPlaying(); }
 function setDifficulty(d) { difficulty = d; }
