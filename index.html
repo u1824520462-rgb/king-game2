@@ -6,7 +6,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
 <script src="/socket.io/socket.io.js"></script>
 <style>
-  /* --- FIX FLUTTUAZIONE: Rimosso position fixed dal body che rompeva la fisica --- */
   * { touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; box-sizing: border-box; }
   html, body { 
     margin: 0; 
@@ -198,7 +197,7 @@ function loadLevel(n) {
     arena.className = 'platform';
     arena.style.cssText = `width: 8000px; height: 100px; left: 0; top: ${groundY}px;`;
     world.appendChild(arena);
-    px = 300; py = groundY - 60;
+    px = 300; py = groundY - 58; // Inizializzato esattamente sopra
   } else {
     const plats = [{w:1500, h:100, l:0, t:groundY}, {w:1200, h:100, l:2700, t:groundY}, {w:1500, h:100, l:5400, t:groundY}];
     plats.forEach(p => {
@@ -211,35 +210,48 @@ function loadLevel(n) {
       d.style.left = b.x+'px'; d.style.top = (groundY - 140)+'px'; d.innerHTML = '👾';
       world.appendChild(d); return {...b, lastShot: 0, y: groundY - 140};
     });
-    px = 150; py = groundY - 100;
+    px = 150; py = groundY - 58; // Inizializzato esattamente sopra
   }
 }
 
 function update() {
   if (state === 'PLAYING') {
     vx += moveDir * ((activeSkill === 'speed') ? 1.8 : 1.1); vx *= 0.88;
-    vy += (vy < 0 && holdingJump) ? 0.38 : 0.85; px += vx; py += vy;
+    vy += (vy < 0 && holdingJump) ? 0.38 : 0.85; 
     
-    /* --- INIZIO FIX FLUTTUAZIONE --- */
+    px += vx; 
+    py += vy;
+
+    // --- LOGICA DI COLLISIONE MIGLIORATA ---
     onGround = false;
+    const playerFeet = py + 58; // Altezza base del giocatore
+    
     document.querySelectorAll('.platform').forEach(pl => {
-      let pL = parseInt(pl.style.left), pT = parseInt(pl.style.top), pW = parseInt(pl.style.width);
-      // vy >= 0 garantisce che la collisione avvenga solo cadendo
-      if (vy >= 0 && px + 38 > pL && px + 4 < pL + pW && py + 58 >= pT && py + 58 <= pT + 15) { 
-        py = pT - 58; // Snap al terreno: porta i piedi esattamente sul bordo
-        vy = 0; 
-        onGround = true; 
+      let pL = parseInt(pl.style.left);
+      let pT = parseInt(pl.style.top);
+      let pW = parseInt(pl.style.width);
+
+      // Verifichiamo se il giocatore è sopra la piattaforma orizzontalmente
+      if (px + 38 > pL && px + 4 < pL + pW) {
+        // Se il giocatore sta cadendo (o è già fermo) e i piedi superano il bordo superiore
+        if (vy >= 0 && playerFeet >= pT && playerFeet <= pT + vy + 10) { 
+          py = pT - 58; // Forza i piedi esattamente sulla riga della piattaforma
+          vy = 0;       // Ferma la caduta
+          onGround = true; 
+        }
       }
     });
-    /* --- FINE FIX FLUTTUAZIONE --- */
 
     if(is1v1) socket.emit('move', { x: px, y: py, dir: moveDir });
+    
     let targetX = -px + (window.innerWidth / 3);
     scrollX += (targetX - scrollX) * 0.1;
     if(scrollX > 0) scrollX = 0;
+    
     document.getElementById('world').style.transform = `translateX(${scrollX}px)`;
     document.getElementById('player').style.left = px + 'px';
     document.getElementById('player').style.top = py + 'px';
+    
     if(moveDir !== 0) document.getElementById('player').style.transform = (moveDir > 0) ? 'scaleX(1)' : 'scaleX(-1)';
     if(py > 1500) { state = 'MENU'; showScreen('end-screen'); }
   }
