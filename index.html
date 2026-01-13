@@ -34,6 +34,7 @@
   #game-container { position: relative; width: 100%; height: 100%; display: none; overflow: hidden; }
   #world { position: absolute; top: 0; left: 0; width: 15000px; height: 100%; }
   
+  /* FIX: Colori fissi Player 1 (Viola) e Player 2 (Blu) */
   #player { position: absolute; width: 42px; height: 58px; background: #ce93d8; border-radius: 8px; border: 3px solid #f3e5f5; z-index: 10; box-shadow: 0 0 20px rgba(206, 147, 216, 0.6); }
   #player2 { position: absolute; width: 42px; height: 58px; background: #4fc3f7; border-radius: 8px; border: 3px solid #e1f5fe; z-index: 9; display: none; box-shadow: 0 0 20px rgba(79, 195, 247, 0.6); }
 
@@ -43,7 +44,10 @@
 
   .platform { position: absolute; background: linear-gradient(180deg, #311b92, #1a237e); border: 1px solid #7c43bd; border-radius: 4px; }
   .boss { position: absolute; width: 110px; height: 140px; border-radius: 15px; z-index: 5; border: 4px solid white; display: flex; align-items: center; justify-content: center; font-size: 40px; }
+  .projectile { position: absolute; width: 24px; height: 24px; border-radius: 50%; z-index: 9; background: #ffeb3b; box-shadow: 0 0 15px #ffeb3b; display: flex; align-items: center; justify-content: center; font-size: 14px; }
   
+  .fountain { position: absolute; width: 80px; height: 100px; display: flex; align-items: center; justify-content: center; font-size: 50px; z-index: 8; text-shadow: 0 0 20px #00e5ff; transition: 0.5s; }
+
   #ui-bar { position: fixed; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; z-index: 100; pointer-events: none; }
   .ui-element { pointer-events: auto; background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 12px; border: 1px solid #7c43bd; font-weight: bold; }
 
@@ -88,6 +92,43 @@
   <button class="menu-btn" onclick="showScreen('main-menu')" style="background:#222;">INDIETRO</button>
 </div>
 
+<div id="settings-menu" class="overlay-screen hide">
+  <h1>IMPOSTAZIONI</h1>
+  <button class="menu-btn" id="diff-0" onclick="setDifficulty(0)">FACILE</button>
+  <button class="menu-btn active" id="diff-1" onclick="setDifficulty(1)">NORMALE</button>
+  <button class="menu-btn" id="diff-2" onclick="setDifficulty(2)">DIFFICILE</button>
+  <button class="menu-btn" onclick="showScreen('main-menu')" style="background:#222; margin-top:20px;">INDIETRO</button>
+</div>
+
+<div id="level-menu" class="overlay-screen hide">
+  <h1>SELEZIONA REGNO</h1>
+  <div id="lvl-grid"></div>
+  <button class="menu-btn" onclick="showScreen('main-menu')" style="background:#222; margin-top:20px;">INDIETRO</button>
+</div>
+
+<div id="stats-menu" class="overlay-screen hide">
+  <h1>PROGRESSI DATI</h1>
+  <div class="stats-box">
+    <p>Regni Sbloccati: <span id="stat-lvls" style="color:#bb86fc">1/10</span></p>
+    <p>Boss Sconfitti: <span id="stat-boss" style="color:#bb86fc">0</span></p>
+    <p>Morti Totali: <span id="stat-deaths" style="color:#bb86fc">0</span></p>
+  </div>
+  <button class="menu-btn" onclick="resetSave()" style="background:#b71c1c; font-size: 0.8rem; width: 200px;">RESET DATI</button>
+  <button class="menu-btn" onclick="showScreen('main-menu')" style="background:#222; margin-top:10px;">INDIETRO</button>
+</div>
+
+<div id="win-screen" class="overlay-screen hide">
+  <h1 style="color:#ffeb3b">VITTORIA!</h1>
+  <button class="menu-btn" onclick="nextLevel()">PROSSIMO LIVELLO</button>
+  <button class="menu-btn" onclick="location.reload()">MENU</button>
+</div>
+
+<div id="end-screen" class="overlay-screen hide">
+  <h1>SCONFITTO</h1>
+  <button class="menu-btn" onclick="retryLevel()">RIPROVA</button>
+  <button class="menu-btn" onclick="location.reload()">MENU</button>
+</div>
+
 <div id="game-container">
   <div id="ui-bar">
     <div class="ui-element">HP: <span id="health-ui">♥♥♥♥♥</span></div>
@@ -123,9 +164,11 @@ function initControls() {
   const btnAtk = document.getElementById('btnAtk');
   const joyArea = document.getElementById('joyArea');
   const knob = document.getElementById('knob');
+
   btnJmp.onpointerdown = () => { if(onGround) { vy = -17; onGround = false; holdingJump = true; } };
   btnJmp.onpointerup = () => { holdingJump = false; };
   btnAtk.onpointerdown = () => { attack(); };
+
   joyArea.onpointermove = (e) => {
     if(e.buttons > 0) {
       let rect = joyArea.getBoundingClientRect();
@@ -144,48 +187,48 @@ function selectSkill(el, skill) {
 }
 
 function askServerCode() {
-  let key = prompt("Crea chiave stanza (o inserisci quella dell'amico):");
-  if(key) {
-    currentRoom = key;
-    socket.emit('joinRoom', key);
-    showScreen('powerup-menu');
-  }
+    let key = prompt("Crea chiave stanza:");
+    if(key) {
+        currentRoom = key;
+        socket.emit('joinRoom', key);
+        showScreen('powerup-menu');
+    }
 }
 
 function start1v1() {
-  is1v1 = true;
-  startPlaying();
-  document.getElementById('player2').style.display = 'block';
+    is1v1 = true;
+    startPlaying();
+    document.getElementById('player2').style.display = 'block';
 }
 
 socket.on('enemyMove', (data) => {
-  const p2 = document.getElementById('player2');
-  if(p2) {
-    p2.style.left = data.x + 'px';
-    p2.style.top = data.y + 'px'; 
-    if(data.dir !== 0) p2.style.transform = (data.dir > 0) ? 'scaleX(1)' : 'scaleX(-1)';
-  }
+    const p2 = document.getElementById('player2');
+    if(p2) {
+        p2.style.left = data.x + 'px';
+        p2.style.top = data.y + 'px';
+        if(data.dir !== 0) p2.style.transform = (data.dir > 0) ? 'scaleX(1)' : 'scaleX(-1)';
+    }
 });
 
 socket.on('enemyAttack', (data) => {
-  let dist = Math.abs(px - data.x);
-  let distY = Math.abs(py - data.y);
-  if(data.skill === 'slow' && dist < 300) {
-    enemySlowed = true;
-    setTimeout(() => { enemySlowed = false; }, 2000);
-  }
-  if(dist < 75 && distY < 65) {
-    if(activeSkill === 'shield' && Math.random() > 0.5) return;
-    health--;
-    updateHearts();
-    if(health <= 0) { showScreen('end-screen'); state = 'MENU'; }
-  }
+    let dist = Math.abs(px - data.x);
+    let distY = Math.abs(py - data.y);
+    if(data.skill === 'slow' && dist < 300) {
+        enemySlowed = true;
+        setTimeout(() => { enemySlowed = false; }, 2000);
+    }
+    if(dist < 70 && distY < 50) {
+        if(activeSkill === 'shield' && Math.random() > 0.5) return;
+        health--;
+        updateHearts();
+        if(health <= 0) { showScreen('end-screen'); state = 'MENU'; }
+    }
 });
 
 function updateHearts() {
-  let hStr = "";
-  for(let i=0; i<5; i++) hStr += (i < health) ? "♥" : "♡";
-  document.getElementById('health-ui').innerText = hStr;
+    let hStr = "";
+    for(let i=0; i<5; i++) hStr += (i < health) ? "♥" : "♡";
+    document.getElementById('health-ui').innerText = hStr;
 }
 
 function loadLevel(n) {
@@ -193,13 +236,13 @@ function loadLevel(n) {
   const world = document.getElementById('world');
   world.querySelectorAll('.platform, .boss, .projectile, #flag, .fountain').forEach(e => e.remove());
   const groundY = 500; 
-  
+
   if (is1v1) {
     const arena = document.createElement('div');
     arena.className = 'platform';
     arena.style.cssText = `width: 8000px; height: 100px; left: 0; top: ${groundY}px;`;
     world.appendChild(arena);
-    px = 300; py = groundY - 58;
+    px = 300; py = groundY - 60;
   } else {
     const plats = [{w:1500, h:100, l:0, t:groundY}, {w:1000, h:100, l:2700, t:groundY}, {w:1000, h:100, l:5300, t:groundY}, {w:1500, h:100, l:7800, t:groundY}];
     for(let j=0; j<25; j++) plats.push({ w: 250, h: 35, l: 1600 + (j * 400), t: (groundY - 150) + (Math.sin(j) * 100) });
@@ -213,13 +256,12 @@ function loadLevel(n) {
       d.style.left = b.x+'px'; d.style.top = (groundY - 140)+'px'; d.style.borderColor = config.bColor; d.innerHTML = (n === 10 ? '👑' : '👾');
       world.appendChild(d); return {...b, hp: b.hp, lastShot: 0};
     });
-    px = 150; py = groundY - 58;
+    px = 150; py = groundY - 60;
   }
   
-  // FIX DEFINITIVO TELECAMERA: Allinea istantaneamente la visuale allo spawn
+  // FIX TELECAMERA: Centratura istantanea allo spawn
   scrollX = -px + (window.innerWidth / 2.5);
   if(scrollX > 0) scrollX = 0;
-  document.getElementById('world').style.transform = `translateX(${scrollX}px)`;
 }
 
 function update() {
@@ -238,17 +280,13 @@ function update() {
       }
     });
 
-    if(is1v1) { socket.emit('move', { x: px, y: py, dir: moveDir }); }
+    if(is1v1) socket.emit('move', { x: px, y: py, dir: moveDir });
 
     let targetX = -px + (window.innerWidth / 2.5);
     scrollX += (targetX - scrollX) * 0.1;
     if(scrollX > 0) scrollX = 0;
-    
     document.getElementById('world').style.transform = `translateX(${scrollX}px)`;
-    const pEl = document.getElementById('player'); 
-    pEl.style.left = px + 'px'; 
-    pEl.style.top = py + 'px';
-    
+    const pEl = document.getElementById('player'); pEl.style.left = px + 'px'; pEl.style.top = py + 'px';
     if(moveDir !== 0) pEl.style.transform = (moveDir > 0) ? 'scaleX(1)' : 'scaleX(-1)';
     if(py > 1500) { stats.deaths++; startPlaying(); }
   }
@@ -260,7 +298,7 @@ function attack() {
   isAttacking = true; 
   const s = document.getElementById('sword');
   s.classList.add('sword-anim'); 
-  if(is1v1) { socket.emit('attack', { x: px, y: py, skill: activeSkill }); }
+  if(is1v1) socket.emit('attack', { x: px, y: py, skill: activeSkill });
   let range = (activeSkill === 'power') ? 250 : 150;
   bosses.forEach((b, i) => {
     if(Math.abs(px - b.x) < range) {
@@ -292,7 +330,9 @@ function startPlaying() {
 
 function showScreen(id) { document.querySelectorAll('.overlay-screen').forEach(s => s.classList.add('hide')); if(id !== 'none') { document.getElementById(id).classList.remove('hide'); updateUIStats(); } }
 function newGame() { is1v1 = false; activeSkill='speed'; unlockedLevel = 1; stats = { deaths: 0, bossKills: 0 }; saveData(); currentLevel = 1; startPlaying(); }
+function continueGame() { loadData(); startPlaying(); }
 function setDifficulty(d) { difficulty = d; }
+function resetSave() { if(confirm("Resettare tutto?")) { localStorage.clear(); location.reload(); } }
 function updateUIStats() { 
   document.getElementById('stat-lvls').innerText = unlockedLevel + "/10"; 
   document.getElementById('stat-boss').innerText = stats.bossKills; 
@@ -305,6 +345,7 @@ function updateUIStats() {
 }
 function saveData() { localStorage.setItem('king_save_v2', JSON.stringify({ unlockedLevel, stats })); }
 function loadData() { const save = localStorage.getItem('king_save_v2'); if(save) { const data = JSON.parse(save); unlockedLevel = data.unlockedLevel || 1; stats = data.stats || stats; } }
+
 loadData(); 
 initControls();
 update();
