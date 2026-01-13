@@ -34,7 +34,6 @@
   #game-container { position: relative; width: 100%; height: 100%; display: none; overflow: hidden; }
   #world { position: absolute; top: 0; left: 0; width: 15000px; height: 100%; }
   
-  /* FIX: Colori fissi Player 1 (Viola) e Player 2 (Blu) */
   #player { position: absolute; width: 42px; height: 58px; background: #ce93d8; border-radius: 8px; border: 3px solid #f3e5f5; z-index: 10; box-shadow: 0 0 20px rgba(206, 147, 216, 0.6); }
   #player2 { position: absolute; width: 42px; height: 58px; background: #4fc3f7; border-radius: 8px; border: 3px solid #e1f5fe; z-index: 9; display: none; box-shadow: 0 0 20px rgba(79, 195, 247, 0.6); }
 
@@ -165,7 +164,7 @@ function initControls() {
   const joyArea = document.getElementById('joyArea');
   const knob = document.getElementById('knob');
 
-  btnJmp.onpointerdown = () => { if(onGround) { vy = -17; onGround = false; holdingJump = true; } };
+  btnJmp.onpointerdown = () => { if(onGround) { vy = -18; onGround = false; holdingJump = true; } };
   btnJmp.onpointerup = () => { holdingJump = false; };
   btnAtk.onpointerdown = () => { attack(); };
 
@@ -217,11 +216,9 @@ socket.on('enemyAttack', (data) => {
         enemySlowed = true;
         setTimeout(() => { enemySlowed = false; }, 2000);
     }
-    if(dist < 70 && distY < 50) {
+    if(dist < 75 && distY < 60) {
         if(activeSkill === 'shield' && Math.random() > 0.5) return;
-        health--;
-        updateHearts();
-        if(health <= 0) { showScreen('end-screen'); state = 'MENU'; }
+        takeDamage();
     }
 });
 
@@ -259,7 +256,6 @@ function loadLevel(n) {
     px = 150; py = groundY - 60;
   }
   
-  // FIX TELECAMERA: Centratura istantanea allo spawn
   scrollX = -px + (window.innerWidth / 2.5);
   if(scrollX > 0) scrollX = 0;
 }
@@ -272,11 +268,33 @@ function update() {
     let curGrav = (vy < 0 && holdingJump) ? 0.38 : 0.85;
     vy += curGrav; px += vx; py += vy;
     if (px < 0) { px = 0; vx = 0; }
+    
+    // COLLISIONI FIXATE
     onGround = false;
     document.querySelectorAll('.platform').forEach(pl => {
       let pL = parseInt(pl.style.left), pT = parseInt(pl.style.top), pW = parseInt(pl.style.width);
-      if (vy >= 0 && px + 35 > pL && px < pL + pW && py + 58 >= pT && py + 58 <= pT + 15) { 
+      if (vy >= 0 && px + 35 > pL && px < pL + pW && py + 58 >= pT && py + 58 <= pT + 20) { 
         py = pT - 58; vy = 0; onGround = true; 
+      }
+    });
+
+    // BOSS ATTACK LOGIC
+    if(!is1v1) {
+      bosses.forEach(b => {
+        if(Date.now() - b.lastShot > 2500 && Math.abs(px - b.x) < 700) {
+          shootProjectile(b.x, b.y + 50);
+          b.lastShot = Date.now();
+        }
+      });
+    }
+
+    // PROJECTILE MOVEMENT
+    projectiles.forEach((p, i) => {
+      p.x += p.vx; p.el.style.left = p.x + 'px';
+      if(Math.abs(p.x - px) < 30 && Math.abs(p.y - py) < 60) {
+        takeDamage(); p.el.remove(); projectiles.splice(i, 1);
+      } else if (Math.abs(p.x - px) > 1000) {
+        p.el.remove(); projectiles.splice(i, 1);
       }
     });
 
@@ -288,9 +306,28 @@ function update() {
     document.getElementById('world').style.transform = `translateX(${scrollX}px)`;
     const pEl = document.getElementById('player'); pEl.style.left = px + 'px'; pEl.style.top = py + 'px';
     if(moveDir !== 0) pEl.style.transform = (moveDir > 0) ? 'scaleX(1)' : 'scaleX(-1)';
-    if(py > 1500) { stats.deaths++; startPlaying(); }
+    
+    // MORTE PER CADUTA O HP
+    if(py > 1500 || health <= 0) { 
+      state = 'MENU'; 
+      stats.deaths++;
+      showScreen('end-screen'); 
+    }
   }
   requestAnimationFrame(update);
+}
+
+function shootProjectile(x, y) {
+  const el = document.createElement('div'); el.className = 'projectile';
+  el.style.left = x + 'px'; el.style.top = y + 'px'; el.innerHTML = "✨";
+  document.getElementById('world').appendChild(el);
+  projectiles.push({el, x, y, vx: (px < x ? -6 : 6)});
+}
+
+function takeDamage() {
+  health--;
+  updateHearts();
+  if(health <= 0) { state = 'MENU'; showScreen('end-screen'); }
 }
 
 function attack() { 
@@ -327,6 +364,8 @@ function startPlaying() {
   document.getElementById('game-container').style.display = 'block'; 
   loadLevel(currentLevel); 
 }
+
+function retryLevel() { health = 5; startPlaying(); }
 
 function showScreen(id) { document.querySelectorAll('.overlay-screen').forEach(s => s.classList.add('hide')); if(id !== 'none') { document.getElementById(id).classList.remove('hide'); updateUIStats(); } }
 function newGame() { is1v1 = false; activeSkill='speed'; unlockedLevel = 1; stats = { deaths: 0, bossKills: 0 }; saveData(); currentLevel = 1; startPlaying(); }
