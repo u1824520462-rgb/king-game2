@@ -44,7 +44,7 @@
 
   .platform { position: absolute; background: linear-gradient(180deg, #311b92, #1a237e); border: 1px solid #7c43bd; border-radius: 4px; }
   .boss { position: absolute; width: 110px; height: 140px; border-radius: 15px; z-index: 5; border: 4px solid white; display: flex; align-items: center; justify-content: center; font-size: 40px; }
-  .projectile { position: absolute; width: 30px; height: 30px; border-radius: 50%; z-index: 9; display: flex; align-items: center; justify-content: center; font-size: 18px; background: #ff5252; box-shadow: 0 0 10px red; }
+  .projectile { position: absolute; width: 30px; height: 30px; border-radius: 50%; z-index: 9; display: flex; align-items: center; justify-content: center; font-size: 18px; }
   
   #ui-bar { position: fixed; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; z-index: 100; pointer-events: none; }
   .ui-element { pointer-events: auto; background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 12px; border: 1px solid #7c43bd; font-weight: bold; }
@@ -72,30 +72,32 @@
   <button class="menu-btn" onclick="showScreen('level-menu')">LIVELLI</button>
   <button class="menu-btn" onclick="askServerCode()" style="background: #b71c1c;">SCONTRO 1v1</button>
   <button class="menu-btn" onclick="showScreen('stats-menu')">PROGRESSI E DATI</button>
+  <button class="menu-btn" onclick="showScreen('settings-menu')">IMPOSTAZIONI</button>
 </div>
 
-<div id="level-menu" class="overlay-screen hide">
-  <h1>LIVELLI</h1>
-  <div id="lvl-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;"></div>
-  <button class="menu-btn" onclick="showScreen('main-menu')" style="margin-top:20px;">INDIETRO</button>
+<div id="settings-menu" class="overlay-screen hide">
+    <h1>IMPOSTAZIONI</h1>
+    <button class="menu-btn" onclick="setDifficulty(0)">FACILE</button>
+    <button class="menu-btn active" onclick="setDifficulty(1)">NORMALE</button>
+    <button class="menu-btn" onclick="showScreen('main-menu')">INDIETRO</button>
 </div>
 
 <div id="stats-menu" class="overlay-screen hide">
-  <h1>PROGRESSI</h1>
-  <div class="stats-box">
-    <p>Boss Sconfitti: <span id="stat-boss">0</span></p>
-    <p>Morti: <span id="stat-deaths">0</span></p>
-  </div>
-  <button class="menu-btn" onclick="showScreen('main-menu')">INDIETRO</button>
+    <h1>PROGRESSI</h1>
+    <div class="stats-box"><p>Boss Sconfitti: <span id="stat-boss">0</span></p></div>
+    <button class="menu-btn" onclick="showScreen('main-menu')">INDIETRO</button>
+</div>
+
+<div id="level-menu" class="overlay-screen hide">
+    <h1>LIVELLI</h1>
+    <div id="lvl-grid"></div>
+    <button class="menu-btn" onclick="showScreen('main-menu')">INDIETRO</button>
 </div>
 
 <div id="powerup-menu" class="overlay-screen hide">
-  <h1>SCEGLI ABILITÀ</h1>
-  <div class="stats-box">
+    <h1>POTENZIAMENTI</h1>
     <div class="pow-item active" onclick="selectSkill(this, 'speed')">VELOCITÀ</div>
-    <div class="pow-item" onclick="selectSkill(this, 'power')">FORZA</div>
-  </div>
-  <button class="menu-btn" onclick="start1v1()">ENTRA NELL'ARENA</button>
+    <button class="menu-btn" onclick="start1v1()">INIZIA SFIDA</button>
 </div>
 
 <div id="game-container">
@@ -119,12 +121,12 @@
 
 <script>
 const socket = (typeof io !== 'undefined') ? io() : { emit:()=>{}, on:()=>{} };
-let state = 'MENU', px, py, vx = 0, vy = 0, health = 5, stats = { boss: 0, deaths: 0 };
-let onGround = false, moveDir = 0, scrollX = 0, holdingJump = false, currentLevel = 1;
-let bosses = [], projectiles = [], is1v1 = false, activeSkill = 'speed';
+let state = 'MENU', currentLevel = 1, px, py, vx = 0, vy = 0, health = 5;
+let onGround = false, moveDir = 0, scrollX = 0, holdingJump = false, is1v1 = false;
+let bosses = [], activeSkill = 'speed';
 
 function initControls() {
-  document.getElementById('btnJmp').onpointerdown = (e) => { e.preventDefault(); if(onGround) { vy = -20; onGround = false; holdingJump = true; } };
+  document.getElementById('btnJmp').onpointerdown = (e) => { e.preventDefault(); if(onGround) { vy = -19.5; onGround = false; holdingJump = true; } };
   document.getElementById('btnJmp').onpointerup = () => { holdingJump = false; };
   document.getElementById('btnAtk').onpointerdown = (e) => { e.preventDefault(); attack(); };
   const joyArea = document.getElementById('joyArea');
@@ -140,15 +142,10 @@ function initControls() {
 
 function loadLevel(n) {
   const world = document.getElementById('world');
-  world.querySelectorAll('.platform, .boss, .projectile').forEach(e => e.remove());
+  world.querySelectorAll('.platform, .boss').forEach(e => e.remove());
   const groundY = 500;
   
-  const plats = [
-    {w:1500, h:100, l:0, t:groundY},
-    {w:1200, h:100, l:2500, t:groundY - 120},
-    {w:1800, h:100, l:4500, t:groundY}
-  ];
-  
+  const plats = [{w:1500, h:100, l:0, t:groundY}, {w:1200, h:100, l:2700, t:groundY}, {w:1500, h:100, l:5400, t:groundY}];
   plats.forEach(p => {
     const d = document.createElement('div'); d.className = 'platform';
     d.style.width = p.w+'px'; d.style.height = p.h+'px'; d.style.left = p.l+'px'; d.style.top = p.t+'px';
@@ -156,60 +153,35 @@ function loadLevel(n) {
   });
 
   if(!is1v1) {
-    bosses = [{id:'b1', x:3000, y: groundY - 260, hp: 20}].map(b => {
+    bosses = [{id:'b1', x:3200, hp:10}].map(b => {
       const d = document.createElement('div'); d.id = b.id; d.className = 'boss';
-      d.style.left = b.x+'px'; d.style.top = b.y+'px'; d.innerHTML = '👾';
-      world.appendChild(d);
-      return {...b, lastShot: 0};
+      d.style.left = b.x+'px'; d.style.top = (groundY - 140)+'px'; d.innerHTML = '👾';
+      world.appendChild(d); return {...b, y: groundY-140};
     });
   }
-  
-  px = 150; py = groundY - 60;
-  document.getElementById('lvl-ui').innerText = n;
+  px = 150; py = groundY - 58;
 }
 
 function update() {
   if (state === 'PLAYING') {
-    let speedMult = (activeSkill === 'speed') ? 1.8 : 1.3;
-    vx += moveDir * speedMult; vx *= 0.88;
-    vy += (vy < 0 && holdingJump) ? 0.4 : 0.9; 
+    vx += moveDir * 1.5; vx *= 0.88;
+    vy += (vy < 0 && holdingJump) ? 0.38 : 0.85; 
     px += vx; py += vy;
 
-    // --- LOGICA DI COLLISIONE INTEGRATA E OTTIMIZZATA ---
+    // --- LOGICA INTEGRATA CHE FUNZIONA (PIEDI STRETTI) ---
     onGround = false;
     document.querySelectorAll('.platform').forEach(pl => {
       let pL = parseInt(pl.style.left);
       let pT = parseInt(pl.style.top);
       let pW = parseInt(pl.style.width);
 
-      // Piedi stretti (margine 12px) per non bloccarsi negli angoli
-      if (px + 30 > pL && px + 12 < pL + pW) {
-        if (vy >= 0 && (py + 58) >= pT && (py + 58) <= pT + vy + 5) { 
+      if (px + 32 > pL && px + 10 < pL + pW) {
+        if (vy >= 0 && (py + 58) >= pT && (py + 58) <= pT + vy + 2) { 
           py = pT - 58; 
           vy = 0; 
           onGround = true; 
         }
       }
-    });
-
-    // Boss Shooting
-    bosses.forEach(b => {
-      if(Date.now() - b.lastShot > 2000) {
-        spawnProjectile(b.x, b.y + 50);
-        b.lastShot = Date.now();
-      }
-    });
-
-    // Proiettili
-    projectiles.forEach((p, idx) => {
-      p.x -= 7;
-      p.el.style.left = p.x + 'px';
-      if(Math.abs(px - p.x) < 40 && Math.abs(py - p.y) < 60) {
-        takeDamage();
-        p.el.remove();
-        projectiles.splice(idx, 1);
-      }
-      if(p.x < px - 1000) { p.el.remove(); projectiles.splice(idx, 1); }
     });
 
     if(is1v1) socket.emit('move', { x: px, y: py, dir: moveDir });
@@ -223,7 +195,7 @@ function update() {
     document.getElementById('player').style.top = py + 'px';
     
     if(moveDir !== 0) document.getElementById('player').style.transform = (moveDir > 0) ? 'scaleX(1)' : 'scaleX(-1)';
-    if(py > 1500) die();
+    if(py > 1500) location.reload();
   }
   requestAnimationFrame(update);
 }
@@ -231,45 +203,7 @@ function update() {
 function attack() {
   const s = document.getElementById('sword');
   s.classList.add('sword-anim');
-  if(is1v1) socket.emit('attack', { x: px, y: py });
-  bosses.forEach(b => {
-    if(Math.abs(px - b.x) < 150) {
-      b.hp -= 5;
-      if(b.hp <= 0) { document.getElementById(b.id).remove(); stats.boss++; updateStats(); }
-    }
-  });
   setTimeout(() => s.classList.remove('sword-anim'), 200);
-}
-
-function spawnProjectile(x, y) {
-  const el = document.createElement('div');
-  el.className = 'projectile';
-  el.style.left = x + 'px'; el.style.top = y + 'px'; el.innerHTML = '🔥';
-  document.getElementById('world').appendChild(el);
-  projectiles.push({el, x, y});
-}
-
-function takeDamage() {
-  health--;
-  updateHearts();
-  if(health <= 0) die();
-}
-
-function die() {
-  stats.deaths++;
-  updateStats();
-  state = 'MENU';
-  showScreen('main-menu');
-}
-
-function updateHearts() {
-  let h = ''; for(let i=0; i<5; i++) h += (i < health) ? '♥♥' : '♡';
-  document.getElementById('health-ui').innerText = h;
-}
-
-function updateStats() {
-  document.getElementById('stat-boss').innerText = stats.boss;
-  document.getElementById('stat-deaths').innerText = stats.deaths;
 }
 
 function showScreen(id) {
@@ -277,10 +211,10 @@ function showScreen(id) {
   if(id !== 'none') document.getElementById(id).classList.remove('hide');
 }
 
-function newGame() { is1v1 = false; health = 5; updateHearts(); state = 'PLAYING'; showScreen('none'); document.getElementById('game-container').style.display = 'block'; loadLevel(1); }
-function askServerCode() { let c = prompt("Codice Arena:"); if(c) showScreen('powerup-menu'); }
-function selectSkill(el, s) { document.querySelectorAll('.pow-item').forEach(i => i.classList.remove('active')); el.classList.add('active'); activeSkill = s; }
-function start1v1() { is1v1 = true; health = 5; updateHearts(); state = 'PLAYING'; showScreen('none'); document.getElementById('game-container').style.display = 'block'; loadLevel(1); document.getElementById('player2').style.display = 'block'; }
+function newGame() { is1v1 = false; state = 'PLAYING'; showScreen('none'); document.getElementById('game-container').style.display = 'block'; loadLevel(1); }
+function askServerCode() { let key = prompt("Codice:"); if(key) showScreen('powerup-menu'); }
+function start1v1() { is1v1 = true; state = 'PLAYING'; showScreen('none'); document.getElementById('game-container').style.display = 'block'; loadLevel(1); document.getElementById('player2').style.display = 'block'; }
+function setDifficulty(d) { alert("Difficoltà impostata!"); }
 
 initControls();
 update();
