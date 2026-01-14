@@ -157,7 +157,7 @@ function initControls() {
   const btnAtk = document.getElementById('btnAtk');
   const joyArea = document.getElementById('joyArea');
   const knob = document.getElementById('knob');
-  btnJmp.onpointerdown = (e) => { e.preventDefault(); if(onGround) { vy = -19; onGround = false; holdingJump = true; } };
+  btnJmp.onpointerdown = (e) => { e.preventDefault(); if(onGround) { vy = -19.5; onGround = false; holdingJump = true; } };
   btnJmp.onpointerup = () => { holdingJump = false; };
   btnAtk.onpointerdown = (e) => { e.preventDefault(); attack(); };
   joyArea.onpointermove = (e) => {
@@ -222,18 +222,19 @@ function update() {
     px += vx; 
     py += vy;
 
-    // --- CORREZIONE COLLISIONE MILLIMETRICA ---
+    // --- LOGICA DI COLLISIONE MIGLIORATA (NO BLOCCO ANGOLO) ---
     onGround = false;
     document.querySelectorAll('.platform').forEach(pl => {
       let pL = parseInt(pl.style.left);
       let pT = parseInt(pl.style.top);
       let pW = parseInt(pl.style.width);
 
-      // 1. Controllo perimetro (stretto di lato per non bloccarsi negli angoli)
-      if (px + 32 > pL && px + 10 < pL + pW) {
-        // 2. Controllo verticale (solo se cade, vy >= 0)
-        if (vy >= 0 && (py + 58) >= pT && (py + 58) <= pT + vy + 1) { 
-          py = pT - 58; // Incolla i piedi al bordo
+      // Verifico se il player è "sopra" la piattaforma orizzontalmente
+      // px+21 è il centro esatto del personaggio (42/2)
+      if (px + 30 > pL && px + 12 < pL + pW) {
+        // Se i piedi superano il top mentre scende
+        if (vy >= 0 && (py + 58) >= pT && (py + 58) <= pT + vy + 2) { 
+          py = pT - 58; 
           vy = 0; 
           onGround = true; 
         }
