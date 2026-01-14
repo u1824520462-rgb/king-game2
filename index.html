@@ -131,23 +131,18 @@ let px, py, vx, vy, health, stats = { deaths: 0, bossKills: 0 };
 let onGround = false, moveDir = 0, scrollX = 0, holdingJump = false, isAttacking = false;
 let projectiles = [], bosses = [], is1v1 = false, activeSkill = 'speed'; 
 
+// Funzioni Socket e controlli originali
 socket.on('enemyAttack', (data) => {
     const es = document.getElementById('enemy-sword');
-    if(es) {
-      es.classList.add('sword-anim');
-      setTimeout(() => es.classList.remove('sword-anim'), 200);
-    }
-    let dist = Math.abs(px - data.x);
-    let distY = Math.abs(py - data.y);
+    if(es) { es.classList.add('sword-anim'); setTimeout(() => es.classList.remove('sword-anim'), 200); }
+    let dist = Math.abs(px - data.x); let distY = Math.abs(py - data.y);
     if(dist < 90 && distY < 70) takeDamage();
 });
 
 socket.on('enemyMove', (data) => {
     const p2 = document.getElementById('player2');
     if(p2) {
-        p2.style.display = 'block';
-        p2.style.left = data.x + 'px';
-        p2.style.top = data.y + 'px';
+        p2.style.display = 'block'; p2.style.left = data.x + 'px'; p2.style.top = data.y + 'px';
         if(data.dir !== 0) p2.style.transform = (data.dir > 0) ? 'scaleX(1)' : 'scaleX(-1)';
     }
 });
@@ -172,12 +167,9 @@ function initControls() {
 }
 
 function attack() { 
-  if(isAttacking) return; 
-  isAttacking = true; 
-  const s = document.getElementById('sword');
-  s.classList.add('sword-anim'); 
+  if(isAttacking) return; isAttacking = true; 
+  const s = document.getElementById('sword'); s.classList.add('sword-anim'); 
   if(is1v1) socket.emit('attack', { x: px, y: py });
-
   let range = (activeSkill === 'power') ? 220 : 150;
   bosses.forEach((b) => {
     if(Math.abs(px - b.x) < range) {
@@ -193,11 +185,9 @@ function loadLevel(n) {
   world.querySelectorAll('.platform, .boss, .projectile, #flag').forEach(e => e.remove());
   const groundY = 500; 
   if (is1v1) {
-    const arena = document.createElement('div');
-    arena.className = 'platform';
+    const arena = document.createElement('div'); arena.className = 'platform';
     arena.style.cssText = `width: 8000px; height: 100px; left: 0; top: ${groundY}px;`;
-    world.appendChild(arena);
-    px = 300; py = groundY - 58; // Inizializzato esattamente sopra
+    world.appendChild(arena); px = 300; py = groundY - 58;
   } else {
     const plats = [{w:1500, h:100, l:0, t:groundY}, {w:1200, h:100, l:2700, t:groundY}, {w:1500, h:100, l:5400, t:groundY}];
     plats.forEach(p => {
@@ -210,54 +200,46 @@ function loadLevel(n) {
       d.style.left = b.x+'px'; d.style.top = (groundY - 140)+'px'; d.innerHTML = '👾';
       world.appendChild(d); return {...b, lastShot: 0, y: groundY - 140};
     });
-    px = 150; py = groundY - 58; // Inizializzato esattamente sopra
+    px = 150; py = groundY - 58;
   }
 }
 
 function update() {
   if (state === 'PLAYING') {
     vx += moveDir * ((activeSkill === 'speed') ? 1.8 : 1.1); vx *= 0.88;
-    vy += (vy < 0 && holdingJump) ? 0.38 : 0.85; 
+    vy += (vy < 0 && holdingJump) ? 0.38 : 0.85; px += vx; py += vy;
     
-    px += vx; 
-    py += vy;
-
-    // --- LOGICA DI COLLISIONE MIGLIORATA ---
     onGround = false;
-    const playerFeet = py + 58; // Altezza base del giocatore
-    
     document.querySelectorAll('.platform').forEach(pl => {
       let pL = parseInt(pl.style.left);
       let pT = parseInt(pl.style.top);
       let pW = parseInt(pl.style.width);
 
-      // Verifichiamo se il giocatore è sopra la piattaforma orizzontalmente
+      // FIX PRECISIONE: Il player cade non appena esce dal bordo orizzontale
       if (px + 38 > pL && px + 4 < pL + pW) {
-        // Se il giocatore sta cadendo (o è già fermo) e i piedi superano il bordo superiore
-        if (vy >= 0 && playerFeet >= pT && playerFeet <= pT + vy + 10) { 
-          py = pT - 58; // Forza i piedi esattamente sulla riga della piattaforma
-          vy = 0;       // Ferma la caduta
+        // Rileva il contatto solo se sta scendendo ed è molto vicino alla riga superiore
+        if (vy >= 0 && (py + 58) >= pT && (py + 58) <= pT + vy + 2) { 
+          py = pT - 58; 
+          vy = 0; 
           onGround = true; 
         }
       }
     });
 
     if(is1v1) socket.emit('move', { x: px, y: py, dir: moveDir });
-    
     let targetX = -px + (window.innerWidth / 3);
     scrollX += (targetX - scrollX) * 0.1;
     if(scrollX > 0) scrollX = 0;
-    
     document.getElementById('world').style.transform = `translateX(${scrollX}px)`;
     document.getElementById('player').style.left = px + 'px';
     document.getElementById('player').style.top = py + 'px';
-    
     if(moveDir !== 0) document.getElementById('player').style.transform = (moveDir > 0) ? 'scaleX(1)' : 'scaleX(-1)';
     if(py > 1500) { state = 'MENU'; showScreen('end-screen'); }
   }
   requestAnimationFrame(update);
 }
 
+// Funzioni UI e salvataggio originali
 function takeDamage() { health--; updateHearts(); if(health <= 0) { state = 'MENU'; showScreen('end-screen'); } }
 function updateHearts() { let hStr = ""; for(let i=0; i<5; i++) hStr += (i < health) ? "♥" : "♡"; document.getElementById('health-ui').innerText = hStr; }
 function selectSkill(el, skill) { document.querySelectorAll('.pow-item').forEach(item => item.classList.remove('active')); el.classList.add('active'); activeSkill = skill; }
