@@ -47,6 +47,10 @@
   .boss { position: absolute; width: 110px; height: 140px; border-radius: 15px; z-index: 5; border: 4px solid white; display: flex; align-items: center; justify-content: center; font-size: 40px; }
   .projectile { position: absolute; width: 30px; height: 30px; border-radius: 50%; background: #ff1744; z-index: 9; display: flex; align-items: center; justify-content: center; }
   
+  /* Nuovi elementi */
+  .fountain { position: absolute; width: 80px; height: 80px; font-size: 50px; display: flex; align-items: center; justify-content: center; z-index: 4; }
+  .flag { position: absolute; width: 60px; height: 100px; font-size: 60px; display: flex; align-items: center; justify-content: center; z-index: 4; }
+
   #ui-bar { position: fixed; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; z-index: 100; pointer-events: none; }
   .ui-element { pointer-events: auto; background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 12px; border: 1px solid #7c43bd; font-weight: bold; }
 
@@ -157,33 +161,49 @@ function selectSkill(el, skill) {
 
 function loadLevel(n) {
   const world = document.getElementById('world');
-  world.querySelectorAll('.platform, .boss, .projectile').forEach(e => e.remove());
+  world.querySelectorAll('.platform, .boss, .projectile, .fountain, .flag').forEach(e => e.remove());
   projectiles = [];
   
-  // Piattaforme varie altezze
+  // PIATTAFORME VARIE ALTEZZE (Percorso più lungo)
   const plats = [
-    {w:1500, h:100, l:0, t:500}, 
-    {w:1000, h:100, l:1800, t:350}, 
-    {w:1200, h:100, l:3200, t:580}, 
-    {w:2000, h:100, l:4800, t:450}
+    {w:600, h:100, l:0, t:500},     // Start
+    {w:300, h:40, l:800, t:400},    
+    {w:300, h:40, l:1200, t:280},   
+    {w:300, h:40, l:1600, t:450},   
+    {w:800, h:100, l:2100, t:500},  // ZONA FONTANA
+    {w:300, h:40, l:3100, t:350},   
+    {w:300, h:40, l:3600, t:250},   
+    {w:1500, h:100, l:4200, t:500}  // ZONA BOSS E BANDIERA
   ];
+
   plats.forEach(p => {
     const d = document.createElement('div'); d.className = 'platform';
     d.style.width = p.w+'px'; d.style.height = p.h+'px'; d.style.left = p.l+'px'; d.style.top = p.t+'px';
     world.appendChild(d);
   });
 
-  // Boss attacchi diversi
+  // FONTANA CURATIVA (In mezzo)
+  const fountain = document.createElement('div');
+  fountain.className = 'fountain'; fountain.style.left = '2450px'; fountain.style.top = '420px';
+  fountain.innerHTML = '⛲'; fountain.id = 'fountain';
+  world.appendChild(fountain);
+
+  // UN SOLO BOSS (Spostato in là)
   if(!is1v1) {
     bosses = [
-        {id:'b1', x:1200, y:360, hp:15, type:'normal', lastAtk:0, emoji:'👾'},
-        {id:'b2', x:3500, y:440, hp:25, type:'fast', lastAtk:0, emoji:'👹'}
+        {id:'b1', x:5000, y:360, hp:30, type:'normal', lastAtk:0, emoji:'👹'}
     ].map(b => {
       const d = document.createElement('div'); d.id = b.id; d.className = 'boss';
       d.style.left = b.x+'px'; d.style.top = b.y+'px'; d.innerHTML = b.emoji;
       world.appendChild(d); return b;
     });
   }
+
+  // BANDIERA FINALE
+  const flag = document.createElement('div');
+  flag.className = 'flag'; flag.style.left = '5500px'; flag.style.top = '400px';
+  flag.innerHTML = '🚩'; flag.id = 'end-flag';
+  world.appendChild(flag);
   
   px = 150; py = 300; 
   maxHealth = (activeSkill === 'shield') ? 8 : 5;
@@ -214,6 +234,18 @@ function update() {
         }
       }
     });
+
+    // Collisione Fontana
+    const f = document.getElementById('fountain');
+    if(f && Math.abs(px - 2450) < 50 && Math.abs(py - 420) < 50) {
+        if(health < maxHealth) { health = maxHealth; updateHearts(); }
+    }
+
+    // Collisione Bandiera (Vittoria)
+    if(Math.abs(px - 5500) < 50) {
+        alert("Livello Completato!");
+        location.reload(); // Torna al menu
+    }
 
     bosses.forEach(b => {
         let now = Date.now();
