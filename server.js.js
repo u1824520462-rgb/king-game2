@@ -5,8 +5,16 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
 
+// Configurazione per Render: permette connessioni da qualsiasi origine
+const io = new Server(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
+});
+
+// Serve i file dalla cartella principale
 app.use(express.static(__dirname));
 
 app.get('/', (req, res) => {
@@ -16,25 +24,26 @@ app.get('/', (req, res) => {
 io.on('connection', (socket) => {
     console.log('Un guerriero si è connesso:', socket.id);
 
-    // Gestione dell'entrata nella stanza (Room)
+    // 1. GESTIONE STANZA: Fondamentale per farli giocare insieme
     socket.on('joinRoom', (roomCode) => {
         socket.join(roomCode);
-        socket.currentRoom = roomCode; // Salviamo la stanza in cui si trova il socket
+        socket.currentRoom = roomCode; 
         console.log(`Guerriero ${socket.id} entrato nella stanza: ${roomCode}`);
     });
 
-    // Movimento: invia i dati solo agli altri nella stessa stanza
-    socket.on('move', (data) => {
+    // 2. MOVIMENTO (Sincronizzato con il comando 'sync' del gioco)
+    socket.on('sync', (data) => {
         if (socket.currentRoom) {
-            socket.to(socket.currentRoom).emit('enemyMove', data);
+            // Invia i dati X, Y e Direzione solo all'amico nella stessa stanza
+            socket.to(socket.currentRoom).emit('playerUpdate', data);
         }
     });
 
-    // Attacco: invia i dati dell'attaccante (posizione x, y) per calcolare il danno
-    socket.on('attack', (data) => {
+    // 3. ATTACCO E DANNO (Sincronizzato con 'damage' del gioco)
+    socket.on('damage', (data) => {
         if (socket.currentRoom) {
-            // Inviamo la posizione dell'attaccante all'avversario
-            socket.to(socket.currentRoom).emit('enemyAttack', data);
+            // Invia il segnale di danno ricevuto all'avversario
+            socket.to(socket.currentRoom).emit('takeDamage', data.amount);
         }
     });
 
@@ -45,5 +54,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Server attivo! Gioca su http://localhost:${PORT}`);
+    console.log(`Server attivo sulla porta ${PORT}`);
 });
