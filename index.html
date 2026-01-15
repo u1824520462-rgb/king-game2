@@ -23,7 +23,6 @@
   .pow-item { border: 2px solid #7c43bd; padding: 10px; margin: 5px; border-radius: 8px; background: rgba(124, 67, 189, 0.1); cursor: pointer; color: white; width: 250px; }
   .pow-item.active { background: #00e676; color: black; font-weight: bold; }
 
-  /* --- STILE GIOCATORI --- */
   #player { position: absolute; width: 42px; height: 58px; background: #ce93d8; border-radius: 8px; border: 3px solid #f3e5f5; z-index: 10; box-shadow: 0 0 20px rgba(206, 147, 216, 0.6); }
   #player2 { position: absolute; width: 42px; height: 58px; background: #4fc3f7; border-radius: 8px; border: 3px solid #e1f5fe; z-index: 9; display: none; box-shadow: 0 0 20px rgba(79, 195, 247, 0.6); }
   
@@ -31,7 +30,7 @@
   .sword-anim { display: flex !important; align-items: center; justify-content: center; animation: slash 0.2s ease-out; }
   @keyframes slash { 0% { transform: rotate(-60deg); } 100% { transform: rotate(60deg); } }
 
-  #hitbox-vis { position: absolute; border: 2px solid red; background: rgba(255,0,0,0.3); display: none; pointer-events: none; z-index: 20; }
+  #hitbox-vis { position: absolute; border: 2px solid red; background: rgba(255,0,0,0.3); display: none; pointer-events: none; z-index: 20; width: 100px; height: 60px; top: 0; }
 
   #game-container { position: relative; width: 100%; height: 100%; display: none; overflow: hidden; }
   #world { position: absolute; top: 0; left: 0; width: 15000px; height: 100%; }
@@ -138,7 +137,6 @@
 </div>
 
 <script>
-// --- LOGICA ONLINE (CORRETTA) ---
 const socket = (typeof io !== 'undefined') ? io() : null;
 let is1v1 = false, roomCode = "", activeSkill = 'speed', opX = 0, opY = 0;
 
@@ -149,18 +147,14 @@ function selectSkill(s) {
 }
 
 function join1v1() {
-    let code = prompt("Inserisci lo STESSO CODICE dell'amico per entrare nella stessa stanza:");
+    let code = prompt("Inserisci lo STESSO CODICE dell'amico:");
     if(!code) return;
     roomCode = code;
     is1v1 = true;
-    
-    if(socket) {
-        socket.emit('joinRoom', roomCode);
-    }
+    if(socket) socket.emit('joinRoom', roomCode);
     startPlaying();
 }
 
-// --- VARIABILI ORIGINALI ---
 let state = 'MENU', currentLevel = 1, unlockedLevel = 1, difficulty = 1;
 let px, py, vx, vy, health, stats = { deaths: 0, bossKills: 0 };
 let onGround = false, moveDir = 0, scrollX = 0, holdingJump = false, isAttacking = false;
@@ -239,7 +233,8 @@ function updateGamepad() {
 function attack() {
   if(isAttacking) return;
   isAttacking = true;
-  document.getElementById('sword').classList.add('sword-anim');
+  const sEl = document.getElementById('sword');
+  sEl.classList.add('sword-anim');
   
   if(is1v1) {
     const hb = document.getElementById('hitbox-vis');
@@ -262,7 +257,7 @@ function attack() {
       }
     });
   }
-  setTimeout(() => { document.getElementById('sword').classList.remove('sword-anim'); isAttacking = false; }, 200);
+  setTimeout(() => { sEl.classList.remove('sword-anim'); isAttacking = false; }, 200);
 }
 
 function update() {
@@ -291,20 +286,15 @@ function update() {
     scrollX = is1v1 ? 0 : Math.max(-14000, Math.min(0, -px + (window.innerWidth / 2)));
     document.getElementById('world').style.transform = `translateX(${scrollX}px)`;
     
-    // --- SINCRONIZZAZIONE POSIZIONE E ANIMAZIONI ---
     if(is1v1 && socket) {
         socket.emit('sync', { 
-            room: roomCode, 
-            x: px, 
-            y: py, 
+            room: roomCode, x: px, y: py, 
             dir: (moveDir >= 0 ? 1 : -1),
-            isAttacking: isAttacking,
-            isJumping: !onGround
+            atk: isAttacking
         });
     }
 
     if(!is1v1) {
-        // Logica single player...
         const config = levelConfigs[currentLevel];
         const sMod = [1.5, 1.0, 0.6][difficulty];
         const pMod = [0.7, 1.0, 1.5][difficulty];
@@ -341,7 +331,6 @@ function update() {
   requestAnimationFrame(update);
 }
 
-// --- RICEZIONE DATI ---
 if(socket) {
     socket.on('playerUpdate', (data) => {
         const p2 = document.getElementById('player2');
@@ -351,19 +340,13 @@ if(socket) {
         p2.style.left = data.x + 'px'; 
         p2.style.top = data.y + 'px';
         p2.style.transform = data.dir === 1 ? 'scaleX(1)' : 'scaleX(-1)';
-        
-        // Sincronizza attacco nemico
-        if(data.isAttacking) s2.classList.add('sword-anim');
+        if(data.atk) s2.classList.add('sword-anim');
         else s2.classList.remove('sword-anim');
     });
-
     socket.on('takeDamage', (amount) => {
         health -= amount;
         document.getElementById('health-ui').innerText = '♥'.repeat(Math.max(0, health));
-        if(health <= 0) { 
-            alert("SCONFITTO!"); 
-            location.reload(); 
-        }
+        if(health <= 0) { alert("SCONFITTO!"); location.reload(); }
     });
 }
 
@@ -401,16 +384,18 @@ function showScreen(id) {
 function startPlaying() {
   state = 'PLAYING'; 
   const groundY = window.innerHeight - 100;
-  
   px = 150; 
-  py = groundY - 58; // Forza la posizione sopra la piattaforma
+  py = groundY - 60; // Posiziona SOPRA il terreno
   vx = 0; vy = 0; projectiles = [];
   
+  document.getElementById('sword').classList.remove('sword-anim');
+  document.getElementById('sword2').classList.remove('sword-anim');
+
   if(is1v1) {
       maxHealth = (activeSkill === 'shield') ? 8 : 5;
       document.getElementById('player2').style.display = 'block';
       document.getElementById('weapon-ui').innerText = "1V1 ARENA";
-      document.getElementById('sword2').style.display = 'flex'; // Mostra spada player 2
+      document.getElementById('sword2').innerText = "⚔️";
   } else {
       maxHealth = 5;
       document.getElementById('player2').style.display = 'none';
@@ -434,7 +419,7 @@ function loadLevel(n) {
 
   if(is1v1) {
       const d = document.createElement('div'); d.className = 'platform';
-      d.style.width = '2000px'; d.style.height = '100px'; d.style.left = '0px'; d.style.top = groundY + 'px';
+      d.style.width = '3000px'; d.style.height = '200px'; d.style.left = '0px'; d.style.top = groundY + 'px';
       world.appendChild(d);
   } else {
       const plats = [{w:800, h:100, l:0, t:groundY}, {w:1000, h:100, l:2700, t:groundY}, {w:1000, h:100, l:5300, t:groundY}, {w:1500, h:100, l:7800, t:groundY}];
@@ -455,7 +440,7 @@ function loadLevel(n) {
       fEl.style.left = "4500px"; fEl.style.top = (groundY - 100) + "px";
       world.appendChild(fEl); fountain = { el: fEl, x: 4500, y: groundY-100 };
       const flag = document.createElement('div'); flag.id = 'flag'; flag.style.position = 'absolute'; 
-      flag.style.left = '9200px'; flag.style.top = (groundY - 80) + 'px'; flag.style.fontSize = '70px'; flag.innerHTML = '🚩';
+      flag.style.left = '9200px'; flag.style.top = (groundY - 80) + 'px'; flag.fontSize = '70px'; flag.innerHTML = '🚩';
       world.appendChild(flag);
   }
 }
