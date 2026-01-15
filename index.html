@@ -17,15 +17,18 @@
 
   .menu-btn { background: #4a148c; color: white; border: 2px solid #7c43bd; padding: 10px 20px; margin: 5px; font-size: 1rem; cursor: pointer; border-radius: 12px; width: 280px; transition: 0.2s; }
   .menu-btn:hover { background: #7c43bd; transform: scale(1.05); }
+  .menu-btn:disabled { background: #222; border-color: #444; opacity: 0.5; cursor: default; }
   .menu-btn.active { background: #00e676; border-color: white; color: black; font-weight: bold; }
 
-  .pow-item { border: 2px solid #7c43bd; padding: 15px; margin: 5px; border-radius: 12px; background: rgba(124, 67, 189, 0.1); cursor: pointer; color: white; width: 280px; transition: 0.2s; }
-  .pow-item.active { background: #00e676; color: black; border-color: white; font-weight: bold; }
+  /* Stili aggiuntivi per 1v1 */
+  .pow-item { border: 2px solid #7c43bd; padding: 10px; margin: 5px; border-radius: 8px; background: rgba(124, 67, 189, 0.1); cursor: pointer; color: white; width: 250px; }
+  .pow-item.active { background: #00e676; color: black; font-weight: bold; }
+  #player2 { position: absolute; width: 42px; height: 58px; background: #4fc3f7; border-radius: 8px; border: 3px solid #e1f5fe; z-index: 9; display: none; }
+  #hitbox-vis { position: absolute; border: 2px solid red; background: rgba(255,0,0,0.3); display: none; pointer-events: none; z-index: 20; }
 
   #game-container { position: relative; width: 100%; height: 100%; display: none; overflow: hidden; }
   #world { position: absolute; top: 0; left: 0; width: 15000px; height: 100%; }
   #player { position: absolute; width: 42px; height: 58px; background: #ce93d8; border-radius: 8px; border: 3px solid #f3e5f5; z-index: 10; box-shadow: 0 0 20px rgba(206, 147, 216, 0.6); }
-  #player2 { position: absolute; width: 42px; height: 58px; background: #4fc3f7; border-radius: 8px; border: 3px solid #e1f5fe; z-index: 9; display: none; }
   
   #sword { position: absolute; width: 50px; height: 50px; display: none; z-index: 11; font-size: 35px; top: -5px; left: 25px; transform-origin: left center; }
   .sword-anim { display: flex !important; align-items: center; justify-content: center; animation: slash 0.2s ease-out; }
@@ -33,19 +36,23 @@
 
   .platform { position: absolute; background: linear-gradient(180deg, #311b92, #1a237e); border: 1px solid #7c43bd; border-radius: 4px; }
   .boss { position: absolute; width: 110px; height: 140px; border-radius: 15px; z-index: 5; border: 4px solid white; display: flex; align-items: center; justify-content: center; font-size: 40px; }
-  .projectile { position: absolute; width: 24px; height: 24px; border-radius: 50%; z-index: 9; background: #ffeb3b; }
+  .projectile { position: absolute; width: 24px; height: 24px; border-radius: 50%; z-index: 9; background: #ffeb3b; box-shadow: 0 0 15px #ffeb3b; display: flex; align-items: center; justify-content: center; font-size: 14px; }
   
+  .fountain { position: absolute; width: 80px; height: 100px; display: flex; align-items: center; justify-content: center; font-size: 50px; z-index: 8; text-shadow: 0 0 20px #00e5ff; transition: 0.5s; }
+
   #ui-bar { position: fixed; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; z-index: 100; pointer-events: none; }
   .ui-element { pointer-events: auto; background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 12px; border: 1px solid #7c43bd; font-weight: bold; }
 
   .controls { position: fixed; bottom: 30px; left: 30px; right: 30px; z-index: 150; display: flex; justify-content: space-between; align-items: flex-end; pointer-events: none; }
   .joystick-area { width: 160px; height: 160px; background: rgba(255, 255, 255, 0.1); border: 3px solid rgba(255, 255, 255, 0.4); border-radius: 50%; position: relative; pointer-events: auto; }
-  #knob { position: absolute; width: 70px; height: 70px; background: #7c43bd; border: 2px solid white; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+  #knob { position: absolute; width: 70px; height: 70px; background: #7c43bd; border: 2px solid white; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+  
   .btn-group { display: flex; gap: 25px; pointer-events: auto; }
-  .action-btn { width: 110px; height: 110px; border-radius: 50%; border: 4px solid rgba(255,255,255,0.4); color: white; font-size: 3rem; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); }
+  .action-btn { width: 110px; height: 110px; border-radius: 50%; border: 4px solid rgba(255,255,255,0.4); color: white; font-size: 3rem; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
 
   .hide { display: none !important; }
   #lvl-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .stats-box { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid #7c43bd; width: 300px; text-align: left; margin-bottom: 20px; }
 </style>
 </head>
 <body>
@@ -58,173 +65,398 @@
   <button class="menu-btn" onclick="newGame()">NUOVO INIZIO</button>
   <button class="menu-btn" id="cont-btn" onclick="continueGame()">CONTINUA</button>
   <button class="menu-btn" onclick="showScreen('level-menu')">LIVELLI</button>
-  <button class="menu-btn" onclick="showScreen('online-menu')" style="background:#b71c1c">SCONTRO 1v1 ONLINE</button>
+  <button class="menu-btn" onclick="showScreen('online-setup')" style="background:#b71c1c">SCONTRO 1v1 ONLINE</button>
   <button class="menu-btn" onclick="showScreen('stats-menu')">PROGRESSI E DATI</button>
+  <button class="menu-btn" onclick="showScreen('settings-menu')">IMPOSTAZIONI</button>
 </div>
 
-<div id="online-menu" class="overlay-screen hide">
-  <h1>ARENA 1v1</h1>
+<div id="online-setup" class="overlay-screen hide">
+  <h1>ARENA ONLINE</h1>
   <div id="pow-speed" class="pow-item active" onclick="selectSkill('speed')">⚡ VELOCITÀ</div>
   <div id="pow-shield" class="pow-item" onclick="selectSkill('shield')">🛡️ SCUDO (8 HP)</div>
   <div id="pow-power" class="pow-item" onclick="selectSkill('power')">🔥 SUPER FORZA</div>
-  <button class="menu-btn" onclick="startOnline()" style="margin-top:20px; background:#00e676; color:black;">ENTRA IN PARTITA</button>
+  <button class="menu-btn" onclick="join1v1()" style="margin-top:20px; background:#00e676; color:black;">GIOCA CON AMICO</button>
   <button class="menu-btn" onclick="showScreen('main-menu')">INDIETRO</button>
+</div>
+
+<div id="settings-menu" class="overlay-screen hide">
+  <h1>IMPOSTAZIONI</h1>
+  <button class="menu-btn" id="diff-0" onclick="setDifficulty(0)">FACILE</button>
+  <button class="menu-btn active" id="diff-1" onclick="setDifficulty(1)">NORMALE</button>
+  <button class="menu-btn" id="diff-2" onclick="setDifficulty(2)">DIFFICILE</button>
+  <button class="menu-btn" onclick="showScreen('main-menu')" style="background:#222; margin-top:20px;">INDIETRO</button>
 </div>
 
 <div id="level-menu" class="overlay-screen hide">
   <h1>SELEZIONA REGNO</h1>
   <div id="lvl-grid"></div>
-  <button class="menu-btn" onclick="showScreen('main-menu')">INDIETRO</button>
+  <button class="menu-btn" onclick="showScreen('main-menu')" style="background:#222; margin-top:20px;">INDIETRO</button>
 </div>
 
 <div id="stats-menu" class="overlay-screen hide">
   <h1>PROGRESSI DATI</h1>
-  <div id="stat-lvls"></div>
-  <button class="menu-btn" onclick="showScreen('main-menu')">INDIETRO</button>
+  <div class="stats-box">
+    <p>Regni Sbloccati: <span id="stat-lvls" style="color:#bb86fc">1/10</span></p>
+    <p>Boss Sconfitti: <span id="stat-boss" style="color:#bb86fc">0</span></p>
+    <p>Morti Totali: <span id="stat-deaths" style="color:#bb86fc">0</span></p>
+  </div>
+  <button class="menu-btn" onclick="resetSave()" style="background:#b71c1c; font-size: 0.8rem; width: 200px;">RESET DATI</button>
+  <button class="menu-btn" onclick="showScreen('main-menu')" style="background:#222; margin-top:10px;">INDIETRO</button>
+</div>
+
+<div id="win-screen" class="overlay-screen hide">
+  <h1 style="color:#ffeb3b">VITTORIA!</h1>
+  <button class="menu-btn" onclick="nextLevel()">PROSSIMO LIVELLO</button>
+  <button class="menu-btn" onclick="location.reload()">MENU</button>
+</div>
+
+<div id="end-screen" class="overlay-screen hide">
+  <h1>SCONFITTO</h1>
+  <button class="menu-btn" onclick="retryLevel()">RIPROVA</button>
+  <button class="menu-btn" onclick="location.reload()">MENU</button>
 </div>
 
 <div id="game-container">
   <div id="ui-bar">
     <div class="ui-element">HP: <span id="health-ui">♥♥♥♥♥</span></div>
-    <div class="ui-element">LVL: <span id="lvl-ui">1</span></div>
-    <button class="ui-element" onclick="location.reload()">Esci</button>
+    <div class="ui-element">LVL: <span id="lvl-ui">1</span> | <span id="weapon-ui"></span></div>
+    <button class="ui-element" style="color: white; pointer-events:auto;" onclick="location.reload()">Esci</button>
   </div>
   <div id="world">
-    <div id="player"><div id="sword">⚔️</div></div>
+    <div id="player"><div id="sword">⚔️</div><div id="hitbox-vis"></div></div>
     <div id="player2"></div>
   </div>
   <div class="controls">
     <div class="joystick-area" id="joyArea"><div id="knob"></div></div>
     <div class="btn-group">
-      <button class="action-btn" id="btnAtk">⚔️</button>
-      <button class="action-btn" id="btnJmp">⬆️</button>
+      <button class="action-btn" style="background:rgba(76, 175, 80, 0.6)" id="btnAtk">⚔️</button>
+      <button class="action-btn" style="background:rgba(255, 51, 102, 0.6)" id="btnJmp">⬆️</button>
     </div>
   </div>
 </div>
 
 <script>
-let socket = (typeof io !== 'undefined') ? io() : null;
-let state = 'MENU', currentLevel = 1, unlockedLevel = 1, is1v1 = false;
-let px, py, vx=0, vy=0, health, maxHealth=5, moveDir=0, onGround=false;
-let activeSkill = 'speed', roomCode = "";
-let opX = 0, opY = 0;
+// --- LOGICA ONLINE (NUOVA) ---
+const socket = (typeof io !== 'undefined') ? io() : null;
+let is1v1 = false, roomCode = "", activeSkill = 'speed', opX = 0, opY = 0;
 
-// GESTIONE POTENZIAMENTI CLICCABILI
-function selectSkill(skill) {
-  activeSkill = skill;
-  document.querySelectorAll('.pow-item').forEach(el => el.classList.remove('active'));
-  document.getElementById('pow-' + skill).classList.add('active');
+function selectSkill(s) {
+    activeSkill = s;
+    document.querySelectorAll('.pow-item').forEach(el => el.classList.remove('active'));
+    document.getElementById('pow-'+s).classList.add('active');
 }
 
-function startOnline() {
-  roomCode = prompt("Inserisci codice stanza:");
-  if(!roomCode) return;
-  is1v1 = true;
-  if(socket) socket.emit('joinRoom', roomCode);
-  startPlaying();
+function join1v1() {
+    let code = prompt("Inserisci codice stanza:");
+    if(!code) return;
+    roomCode = code;
+    is1v1 = true;
+    if(socket) socket.emit('joinRoom', roomCode);
+    startPlaying();
 }
 
-// LOGICA AVVIO PARTITA (Sia Single che 1v1)
+// --- VARIABILI ORIGINALI ---
+let state = 'MENU', currentLevel = 1, unlockedLevel = 1, difficulty = 1;
+let px, py, vx, vy, health, stats = { deaths: 0, bossKills: 0 };
+let onGround = false, moveDir = 0, scrollX = 0, holdingJump = false, isAttacking = false;
+let projectiles = [], bosses = [], fountain = null;
+let isTouchActive = false;
+const DEADZONE = 0.2;
+
+const weaponData = [
+  { n: "Spada", icon: "⚔️", range: 250 }, { n: "Ascia", icon: "🪓", range: 220 },
+  { n: "Lancia", icon: "🔱", range: 310 }, { n: "Martello", icon: "🔨", range: 210 },
+  { n: "Arco", icon: "🏹", range: 450 }, { n: "Magia", icon: "🪄", range: 380 },
+  { n: "Daga", icon: "🗡️", range: 190 }, { n: "Shuriken", icon: "🎯", range: 420 },
+  { n: "Fustigatore", icon: "⛓️", range: 330 }, { n: "Scettro Reale", icon: "👑", range: 500 }
+];
+
+const levelConfigs = {};
+for(let i=1; i<=10; i++) {
+  const patterns = ['single', 'triple', 'rain', 'circle'];
+  levelConfigs[i] = {
+    weapon: weaponData[i-1], 
+    bColor: `hsl(${i * 35}, 70%, 50%)`,
+    bosses: [{id:'b1', x:3200, hp: 10+(i*5), type: patterns[i%4]}, {id:'b2', x:5800, hp: 15+(i*5), type: patterns[i%4]}]
+  };
+}
+
+function setDifficulty(val) {
+  difficulty = val;
+  for(let i=0; i<3; i++) { document.getElementById(`diff-${i}`).classList.remove('active'); }
+  document.getElementById(`diff-${val}`).classList.add('active');
+}
+
+const joyArea = document.getElementById('joyArea'), knob = document.getElementById('knob');
+function updateJoystick(e) {
+  e.preventDefault();
+  isTouchActive = true;
+  const touch = e.touches[0];
+  const rect = joyArea.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const dist = touch.clientX - centerX;
+  const maxMove = rect.width / 2 - 10;
+  const clampedDist = Math.max(-maxMove, Math.min(maxMove, dist));
+  knob.style.left = `calc(50% + ${clampedDist}px)`;
+  if (dist > 15) moveDir = 1; else if (dist < -15) moveDir = -1; else moveDir = 0;
+}
+joyArea.addEventListener('touchstart', updateJoystick);
+joyArea.addEventListener('touchmove', updateJoystick);
+joyArea.addEventListener('touchend', () => { 
+  isTouchActive = false;
+  moveDir = 0; 
+  knob.style.left = '50%'; 
+});
+
+function updateGamepad() {
+  const gamepads = navigator.getGamepads();
+  const gp = gamepads[0];
+  if (gp && state === 'PLAYING' && !isTouchActive) {
+    const axisX = gp.axes[0];
+    if (Math.abs(axisX) > DEADZONE) {
+      moveDir = axisX > 0 ? 1 : -1;
+      const maxMove = joyArea.offsetWidth / 2 - 10;
+      knob.style.left = `calc(50% + ${axisX * maxMove}px)`;
+    } else {
+      moveDir = 0;
+      knob.style.left = '50%';
+    }
+    if (gp.buttons[6].pressed || gp.buttons[0].pressed) {
+      if (onGround && !holdingJump) { vy = -16; }
+      holdingJump = true;
+    } else if (!document.getElementById('btnJmp').matches(':active')) {
+      holdingJump = false;
+    }
+    if (gp.buttons[7].pressed) { attack(); }
+  }
+}
+
+function attack() {
+  if(isAttacking) return;
+  isAttacking = true;
+  document.getElementById('sword').classList.add('sword-anim');
+  
+  if(is1v1) {
+    // Logica danno 1v1
+    const hb = document.getElementById('hitbox-vis');
+    hb.style.display = 'block';
+    let face = (moveDir >= 0) ? 1 : -1;
+    hb.style.left = (face === 1) ? '30px' : '-90px';
+    let hitX = (face === 1) ? px + 30 : px - 90;
+    if(hitX < opX + 42 && hitX + 100 > opX && py < opY + 58 && py + 60 > opY) {
+        let d = (activeSkill === 'power') ? 2 : 1;
+        socket.emit('damage', { room: roomCode, amount: d });
+    }
+    setTimeout(() => { hb.style.display = 'none'; }, 200);
+  } else {
+    // Logica danno Boss originale
+    const weapon = levelConfigs[currentLevel].weapon;
+    bosses.forEach(b => {
+      if(b.hp > 0 && Math.abs(px - b.x) < weapon.range) {
+        b.hp--; const el = document.getElementById(b.id);
+        el.style.filter = "brightness(3)"; setTimeout(() => el.style.filter = "none", 100);
+        if(b.hp <= 0) { el.style.display = 'none'; stats.bossKills++; saveData(); }
+      }
+    });
+  }
+  setTimeout(() => { document.getElementById('sword').classList.remove('sword-anim'); isAttacking = false; }, 200);
+}
+
+function update() {
+  updateGamepad();
+  if (state === 'PLAYING') {
+    let speedMult = (is1v1 && activeSkill === 'speed') ? 1.6 : 1.0;
+    vx += moveDir * 1.0 * speedMult; vx *= 0.85;
+    let curGrav = (vy < 0 && holdingJump) ? 0.35 : 0.8;
+    vy += curGrav; px += vx; py += vy;
+
+    if (px < 0) { px = 0; vx = 0; }
+
+    onGround = false;
+    document.querySelectorAll('.platform').forEach(pl => {
+      const pT = pl.offsetTop, pL = pl.offsetLeft, pR = pL + pl.offsetWidth;
+      if (vy >= 0 && px + 35 > pL && px < pR && py + 58 >= pT && py + 58 <= pT + 30) { 
+        py = pT - 58; vy = 0; onGround = true; 
+      }
+    });
+
+    if(!is1v1 && fountain) {
+      let distX = Math.abs(px - fountain.x);
+      let distY = Math.abs(py - fountain.y);
+      if(distX < 60 && distY < 80) {
+        if(health < 5) {
+            health = 5;
+            document.getElementById('health-ui').innerText = '♥♥♥♥♥';
+            fountain.el.style.filter = "drop-shadow(0 0 15px #00ff00) brightness(1.5)";
+            setTimeout(() => { fountain.el.style.filter = "none"; }, 500);
+        }
+      }
+    }
+
+    if(py > window.innerHeight + 100) { 
+        if(is1v1) { px=300; py=100; health--; } 
+        else { state = 'END'; stats.deaths++; saveData(); showScreen('end-screen'); }
+    }
+    
+    scrollX = is1v1 ? 0 : Math.max(-14000, Math.min(0, -px + (window.innerWidth / 2)));
+    document.getElementById('world').style.transform = `translateX(${scrollX}px)`;
+    
+    if(is1v1 && socket) {
+        socket.emit('sync', { room: roomCode, x: px, y: py, dir: (moveDir >= 0 ? 1 : -1) });
+    }
+
+    if(!is1v1) {
+        const config = levelConfigs[currentLevel];
+        const sMod = [1.5, 1.0, 0.6][difficulty];
+        const pMod = [0.7, 1.0, 1.5][difficulty];
+        const baseSpeed = (5 + (currentLevel * 0.7)) * pMod;
+        const baseRate = (2200 - (currentLevel * 150)) * sMod;
+
+        bosses.forEach(b => {
+          if(b.hp > 0 && Math.abs(px - b.x) < 900 && Date.now() - b.lastShot > baseRate) {
+              const bossEl = document.getElementById(b.id);
+              const bY = bossEl.offsetTop + 50;
+              const angle = Math.atan2(py - bY, px - b.x);
+              if(b.type === 'triple') for(let off=-0.3; off<=0.3; off+=0.3) spawnProjectile(b.x, bY, Math.cos(angle+off)*baseSpeed, Math.sin(angle+off)*baseSpeed, "🔥");
+              else if(b.type === 'rain') for(let i=0; i<3; i++) spawnProjectile(px-200+(Math.random()*400), 0, 0, baseSpeed, "☄️");
+              else if(b.type === 'circle') for(let a=0; a<Math.PI*2; a+=Math.PI/4) spawnProjectile(b.x, bY, Math.cos(a)*baseSpeed, Math.sin(a)*baseSpeed, "❄️");
+              else spawnProjectile(b.x, bY, Math.cos(angle)*baseSpeed, Math.sin(angle)*baseSpeed, "⚡");
+              b.lastShot = Date.now();
+          }
+        });
+
+        projectiles.forEach((p, i) => {
+          p.x += p.vx; p.y += p.vy; p.el.style.left = p.x + 'px'; p.el.style.top = p.y + 'px';
+          if(Math.abs(p.x - px) < 30 && Math.abs(p.y - py) < 50) {
+            health--; p.el.remove(); projectiles.splice(i, 1);
+            document.getElementById('health-ui').innerText = '♥'.repeat(Math.max(0, health));
+            if(health <= 0) { state = 'END'; stats.deaths++; saveData(); showScreen('end-screen'); }
+          } else if(p.x < px-1500 || p.x > px+1500 || p.y > 2000) { p.el.remove(); projectiles.splice(i, 1); }
+        });
+
+        if(px > 9200) { state = 'WIN'; unlockedLevel = Math.max(unlockedLevel, Math.min(10, currentLevel + 1)); saveData(); showScreen('win-screen'); }
+    }
+
+    const pEl = document.getElementById('player'); pEl.style.left = px + 'px'; pEl.style.top = py + 'px';
+    pEl.style.transform = (moveDir >= 0) ? 'scaleX(1)' : 'scaleX(-1)';
+  }
+  requestAnimationFrame(update);
+}
+
+// SOCKET RECEIVE
+if(socket) {
+    socket.on('playerUpdate', (data) => {
+        const p2 = document.getElementById('player2');
+        opX = data.x; opY = data.y;
+        p2.style.left = data.x + 'px'; p2.style.top = data.y + 'px';
+        p2.style.transform = data.dir === 1 ? 'scaleX(1)' : 'scaleX(-1)';
+    });
+    socket.on('takeDamage', (amount) => {
+        health -= amount;
+        document.getElementById('health-ui').innerText = '♥'.repeat(Math.max(0, health));
+        if(health <= 0) location.reload();
+    });
+}
+
+function spawnProjectile(x, y, vX, vY, icon = "") {
+  const pr = document.createElement('div'); pr.className = 'projectile';
+  pr.style.left = x + 'px'; pr.style.top = y + 'px'; if(icon) pr.innerHTML = icon;
+  document.getElementById('world').appendChild(pr);
+  projectiles.push({ el: pr, x: x, y: y, vx: vX, vy: vY });
+}
+
+function loadData() {
+  const save = localStorage.getItem('king_save_v2');
+  if(save) { const data = JSON.parse(save); unlockedLevel = data.unlockedLevel || 1; stats = data.stats || stats; }
+  updateUIStats();
+}
+function saveData() { localStorage.setItem('king_save_v2', JSON.stringify({ unlockedLevel, stats })); }
+
+function updateUIStats() {
+  document.getElementById('stat-lvls').innerText = unlockedLevel + "/10";
+  document.getElementById('stat-boss').innerText = stats.bossKills;
+  document.getElementById('stat-deaths').innerText = stats.deaths;
+  document.getElementById('cont-btn').disabled = (unlockedLevel === 1 && stats.deaths === 0);
+  const grid = document.getElementById('lvl-grid'); grid.innerHTML = '';
+  for(let i=1; i<=10; i++) {
+    const b = document.createElement('button'); b.className = 'menu-btn'; b.style.width = '130px'; b.innerText = "REGNO " + i;
+    b.disabled = i > unlockedLevel; b.onclick = () => { is1v1 = false; currentLevel = i; startPlaying(); }; grid.appendChild(b);
+  }
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.overlay-screen').forEach(s => s.classList.add('hide'));
+  if(id !== 'none') { document.getElementById(id).classList.remove('hide'); updateUIStats(); }
+}
+
 function startPlaying() {
-  state = 'PLAYING';
-  px = 150; py = 300; vx = 0; vy = 0;
+  state = 'PLAYING'; px = 150; 
+  const baseHeight = window.innerHeight > 400 ? window.innerHeight - 150 : window.innerHeight - 80;
+  py = baseHeight - 200; vx = 0; vy = 0; projectiles = [];
   
-  maxHealth = (is1v1 && activeSkill === 'shield') ? 8 : 5;
+  if(is1v1) {
+      maxHealth = (activeSkill === 'shield') ? 8 : 5;
+      document.getElementById('player2').style.display = 'block';
+      document.getElementById('weapon-ui').innerText = "1V1 ARENA";
+  } else {
+      maxHealth = 5;
+      document.getElementById('player2').style.display = 'none';
+      const config = levelConfigs[currentLevel];
+      document.getElementById('weapon-ui').innerText = config.weapon.n;
+      document.getElementById('sword').innerText = config.weapon.icon;
+      document.getElementById('lvl-ui').innerText = currentLevel;
+  }
+  
   health = maxHealth;
-  
   document.getElementById('health-ui').innerText = '♥'.repeat(health);
-  document.getElementById('player2').style.display = is1v1 ? 'block' : 'none';
-  document.getElementById('game-container').style.display = 'block';
-  showScreen('none');
-  
+  showScreen('none'); document.getElementById('game-container').style.display = 'block';
   loadLevel(currentLevel);
 }
 
 function loadLevel(n) {
   const world = document.getElementById('world');
-  world.querySelectorAll('.platform, .boss').forEach(e => e.remove());
-  
+  world.querySelectorAll('.platform, .boss, .projectile, #flag, .fountain').forEach(e => e.remove());
+  const screenH = window.innerHeight;
+  const groundY = screenH - 100;
+
   if(is1v1) {
-    const d = document.createElement('div'); d.className = 'platform';
-    d.style.cssText = `width:1200px; height:60px; left:0; top:${window.innerHeight-100}px;`;
-    world.appendChild(d);
+      const d = document.createElement('div'); d.className = 'platform';
+      d.style.width = '1500px'; d.style.height = '100px'; d.style.left = '0px'; d.style.top = groundY + 'px';
+      world.appendChild(d);
   } else {
-    // Qui ricarica le tue piattaforme originali
-    const d = document.createElement('div'); d.className = 'platform';
-    d.style.cssText = `width:2000px; height:100px; left:0; top:${window.innerHeight-100}px;`;
-    world.appendChild(d);
+      const plats = [{w:800, h:100, l:0, t:groundY}, {w:1000, h:100, l:2700, t:groundY}, {w:1000, h:100, l:5300, t:groundY}, {w:1500, h:100, l:7800, t:groundY}];
+      for(let j=0; j<20; j++) plats.push({ w: 250, h: 35, l: 850 + (j * 450), t: (groundY - 150) + (Math.sin(j) * 80) });
+      plats.forEach(p => {
+        const d = document.createElement('div'); d.className = 'platform';
+        d.style.width = p.w + 'px'; d.style.height = p.h + 'px'; d.style.left = p.l + 'px'; d.style.top = p.t + 'px';
+        world.appendChild(d);
+      });
+      const config = levelConfigs[n];
+      bosses = config.bosses.map(b => {
+        const d = document.createElement('div'); d.id = b.id; d.className = 'boss';
+        d.style.left = b.x + 'px'; d.style.top = (groundY - 140) + 'px'; 
+        d.style.borderColor = config.bColor; d.innerHTML = (n === 10 ? '👑' : '👾');
+        world.appendChild(d); return {...b, lastShot: 0};
+      });
+      const fEl = document.createElement('div'); fEl.className = 'fountain'; fEl.innerHTML = "⛲";
+      fEl.style.left = "4500px"; fEl.style.top = (groundY - 100) + "px";
+      world.appendChild(fEl); fountain = { el: fEl, x: 4500, y: groundY-100 };
+      const flag = document.createElement('div'); flag.id = 'flag'; flag.style.position = 'absolute'; 
+      flag.style.left = '9200px'; flag.style.top = (groundY - 80) + 'px'; flag.style.fontSize = '70px'; flag.innerHTML = '🚩';
+      world.appendChild(flag);
   }
 }
 
-function attack() {
-  document.getElementById('sword').classList.add('sword-anim');
-  if(is1v1 && socket) {
-      let face = (vx >= 0) ? 1 : -1;
-      let dmg = (activeSkill === 'power') ? 2 : 1;
-      socket.emit('attack', { room: roomCode, dmg: dmg });
-  }
-  setTimeout(() => document.getElementById('sword').classList.remove('sword-anim'), 200);
-}
+document.getElementById('btnJmp').addEventListener('touchstart', (e) => { e.preventDefault(); if(onGround) vy = -16; holdingJump = true; });
+document.getElementById('btnJmp').addEventListener('touchend', () => { holdingJump = false; });
+document.getElementById('btnAtk').addEventListener('touchstart', (e) => { e.preventDefault(); attack(); });
 
-function update() {
-  if (state === 'PLAYING') {
-    let speed = (is1v1 && activeSkill === 'speed') ? 1.5 : 1.0;
-    vx += moveDir * speed; vx *= 0.85; vy += 0.8;
-    px += vx; py += vy;
-
-    onGround = false;
-    document.querySelectorAll('.platform').forEach(pl => {
-      if (vy >= 0 && px + 35 > pl.offsetLeft && px < pl.offsetLeft + pl.offsetWidth && py + 58 >= pl.offsetTop && py + 58 <= pl.offsetTop + 30) {
-        py = pl.offsetTop - 58; vy = 0; onGround = true;
-      }
-    });
-
-    if(is1v1 && socket) {
-      socket.emit('sync', { room: roomCode, x: px, y: py });
-    }
-
-    document.getElementById('player').style.left = px + 'px';
-    document.getElementById('player').style.top = py + 'px';
-    document.getElementById('player').style.transform = vx >= 0 ? 'scaleX(1)' : 'scaleX(-1)';
-  }
-  requestAnimationFrame(update);
-}
-
-// RICEZIONE DATI ONLINE
-if(socket) {
-  socket.on('updatePos', (data) => {
-    document.getElementById('player2').style.left = data.x + 'px';
-    document.getElementById('player2').style.top = data.y + 'px';
-  });
-  socket.on('hit', (dmg) => {
-    health -= dmg;
-    document.getElementById('health-ui').innerText = '♥'.repeat(Math.max(0, health));
-    if(health <= 0) location.reload();
-  });
-}
-
-// FUNZIONI MENU ORIGINALI (Sistemate per funzionare)
-function newGame() { is1v1 = false; startPlaying(); }
-function continueGame() { is1v1 = false; startPlaying(); }
-function showScreen(id) {
-  document.querySelectorAll('.overlay-screen').forEach(s => s.classList.add('hide'));
-  if(id !== 'none') document.getElementById(id).classList.remove('hide');
-}
-
-// CONTROLLI (Joystick originale)
-const joyArea = document.getElementById('joyArea'), knob = document.getElementById('knob');
-joyArea.addEventListener('touchstart', (e) => {
-  const rect = joyArea.getBoundingClientRect();
-  const dist = e.touches[0].clientX - (rect.left + rect.width/2);
-  moveDir = dist > 0 ? 1 : -1;
-  knob.style.left = dist > 0 ? '70%' : '30%';
-});
-joyArea.addEventListener('touchend', () => { moveDir = 0; knob.style.left = '50%'; });
-
-document.getElementById('btnJmp').addEventListener('touchstart', () => { if(onGround) vy = -16; });
-document.getElementById('btnAtk').addEventListener('touchstart', attack);
-
-update();
+function newGame() { is1v1 = false; unlockedLevel = 1; stats = { deaths: 0, bossKills: 0 }; saveData(); currentLevel = 1; startPlaying(); }
+function continueGame() { is1v1 = false; currentLevel = unlockedLevel; startPlaying(); }
+function retryLevel() { startPlaying(); }
+function resetSave() { localStorage.clear(); location.reload(); }
+function nextLevel() { if(currentLevel < 10) { currentLevel++; startPlaying(); } else location.reload(); }
+loadData(); update();
 </script>
 </body>
 </html>
