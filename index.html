@@ -20,7 +20,6 @@
   .menu-btn:disabled { background: #222; border-color: #444; opacity: 0.5; cursor: default; }
   .menu-btn.active { background: #00e676; border-color: white; color: black; font-weight: bold; }
 
-  /* Stili aggiuntivi per 1v1 */
   .pow-item { border: 2px solid #7c43bd; padding: 10px; margin: 5px; border-radius: 8px; background: rgba(124, 67, 189, 0.1); cursor: pointer; color: white; width: 250px; }
   .pow-item.active { background: #00e676; color: black; font-weight: bold; }
   #player2 { position: absolute; width: 42px; height: 58px; background: #4fc3f7; border-radius: 8px; border: 3px solid #e1f5fe; z-index: 9; display: none; }
@@ -75,7 +74,7 @@
   <div id="pow-speed" class="pow-item active" onclick="selectSkill('speed')">⚡ VELOCITÀ</div>
   <div id="pow-shield" class="pow-item" onclick="selectSkill('shield')">🛡️ SCUDO (8 HP)</div>
   <div id="pow-power" class="pow-item" onclick="selectSkill('power')">🔥 SUPER FORZA</div>
-  <button class="menu-btn" onclick="join1v1()" style="margin-top:20px; background:#00e676; color:black;">GIOCA CON AMICO</button>
+  <button class="menu-btn" onclick="join1v1()" style="margin-top:20px; background:#00e676; color:black;">ENTRA NELLA STANZA</button>
   <button class="menu-btn" onclick="showScreen('main-menu')">INDIETRO</button>
 </div>
 
@@ -136,7 +135,7 @@
 </div>
 
 <script>
-// --- LOGICA ONLINE (NUOVA) ---
+// --- LOGICA ONLINE SISTEMATA PER STANZA CONDIVISA ---
 const socket = (typeof io !== 'undefined') ? io() : null;
 let is1v1 = false, roomCode = "", activeSkill = 'speed', opX = 0, opY = 0;
 
@@ -147,11 +146,13 @@ function selectSkill(s) {
 }
 
 function join1v1() {
-    let code = prompt("Inserisci codice stanza:");
+    let code = prompt("Inserisci lo STESSO CODICE dell'amico:");
     if(!code) return;
     roomCode = code;
     is1v1 = true;
-    if(socket) socket.emit('joinRoom', roomCode);
+    if(socket) {
+        socket.emit('joinRoom', roomCode); // Invia il segnale al server per raggruppare i due client
+    }
     startPlaying();
 }
 
@@ -237,7 +238,6 @@ function attack() {
   document.getElementById('sword').classList.add('sword-anim');
   
   if(is1v1) {
-    // Logica danno 1v1
     const hb = document.getElementById('hitbox-vis');
     hb.style.display = 'block';
     let face = (moveDir >= 0) ? 1 : -1;
@@ -249,7 +249,6 @@ function attack() {
     }
     setTimeout(() => { hb.style.display = 'none'; }, 200);
   } else {
-    // Logica danno Boss originale
     const weapon = levelConfigs[currentLevel].weapon;
     bosses.forEach(b => {
       if(b.hp > 0 && Math.abs(px - b.x) < weapon.range) {
@@ -280,19 +279,6 @@ function update() {
       }
     });
 
-    if(!is1v1 && fountain) {
-      let distX = Math.abs(px - fountain.x);
-      let distY = Math.abs(py - fountain.y);
-      if(distX < 60 && distY < 80) {
-        if(health < 5) {
-            health = 5;
-            document.getElementById('health-ui').innerText = '♥♥♥♥♥';
-            fountain.el.style.filter = "drop-shadow(0 0 15px #00ff00) brightness(1.5)";
-            setTimeout(() => { fountain.el.style.filter = "none"; }, 500);
-        }
-      }
-    }
-
     if(py > window.innerHeight + 100) { 
         if(is1v1) { px=300; py=100; health--; } 
         else { state = 'END'; stats.deaths++; saveData(); showScreen('end-screen'); }
@@ -302,10 +288,12 @@ function update() {
     document.getElementById('world').style.transform = `translateX(${scrollX}px)`;
     
     if(is1v1 && socket) {
+        // Invia posizione nella stanza condivisa
         socket.emit('sync', { room: roomCode, x: px, y: py, dir: (moveDir >= 0 ? 1 : -1) });
     }
 
     if(!is1v1) {
+        // Logica single player originale...
         const config = levelConfigs[currentLevel];
         const sMod = [1.5, 1.0, 0.6][difficulty];
         const pMod = [0.7, 1.0, 1.5][difficulty];
@@ -333,7 +321,6 @@ function update() {
             if(health <= 0) { state = 'END'; stats.deaths++; saveData(); showScreen('end-screen'); }
           } else if(p.x < px-1500 || p.x > px+1500 || p.y > 2000) { p.el.remove(); projectiles.splice(i, 1); }
         });
-
         if(px > 9200) { state = 'WIN'; unlockedLevel = Math.max(unlockedLevel, Math.min(10, currentLevel + 1)); saveData(); showScreen('win-screen'); }
     }
 
@@ -343,9 +330,10 @@ function update() {
   requestAnimationFrame(update);
 }
 
-// SOCKET RECEIVE
+// RICEZIONE DATI ONLINE SINCRONIZZATI
 if(socket) {
     socket.on('playerUpdate', (data) => {
+        // Mostra l'amico solo se è nella stessa stanza
         const p2 = document.getElementById('player2');
         opX = data.x; opY = data.y;
         p2.style.left = data.x + 'px'; p2.style.top = data.y + 'px';
@@ -354,7 +342,7 @@ if(socket) {
     socket.on('takeDamage', (amount) => {
         health -= amount;
         document.getElementById('health-ui').innerText = '♥'.repeat(Math.max(0, health));
-        if(health <= 0) location.reload();
+        if(health <= 0) { alert("SCONFITTO!"); location.reload(); }
     });
 }
 
