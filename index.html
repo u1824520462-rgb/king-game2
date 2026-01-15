@@ -9,30 +9,32 @@
   * { touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; box-sizing: border-box; }
   body { margin: 0; height: 100vh; width: 100vw; overflow: hidden; background: #020005; font-family: 'Segoe UI', sans-serif; color: #e0c0ff; }
   #stars-bg { position: fixed; inset: 0; background: radial-gradient(circle at center, #1a0033 0%, #020005 100%); z-index: -1; }
+  #stars-bg::before { content: ""; position: absolute; inset: 0; background-image: radial-gradient(2px 2px at 50px 100px, #fff, transparent), radial-gradient(1px 1px at 200px 300px, #fff, transparent); background-size: 400px 400px; }
   
   .overlay-screen { position: fixed; inset: 0; background: rgba(5, 0, 15, 0.98); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 500; text-align: center; }
   h1 { font-size: 3rem; color: #f3e5f5; margin: 0; text-shadow: 0 0 20px #7c43bd; }
   .subtitle { color: #bb86fc; margin-bottom: 20px; letter-spacing: 2px; }
 
   .menu-btn { background: #4a148c; color: white; border: 2px solid #7c43bd; padding: 10px 20px; margin: 5px; font-size: 1rem; cursor: pointer; border-radius: 12px; width: 280px; transition: 0.2s; }
+  .menu-btn:hover { background: #7c43bd; transform: scale(1.05); }
   .menu-btn.active { background: #00e676; border-color: white; color: black; font-weight: bold; }
 
-  /* Hitbox Visiva */
-  #hitbox-vis { position: absolute; border: 2px solid red; background: rgba(255,0,0,0.3); display: none; pointer-events: none; z-index: 20; }
+  .pow-item { border: 2px solid #7c43bd; padding: 15px; margin: 5px; border-radius: 12px; background: rgba(124, 67, 189, 0.1); cursor: pointer; color: white; width: 280px; transition: 0.2s; }
+  .pow-item.active { background: #00e676; color: black; border-color: white; font-weight: bold; }
 
   #game-container { position: relative; width: 100%; height: 100%; display: none; overflow: hidden; }
   #world { position: absolute; top: 0; left: 0; width: 15000px; height: 100%; }
-  #player { position: absolute; width: 42px; height: 58px; background: #ce93d8; border-radius: 8px; border: 3px solid #f3e5f5; z-index: 10; }
+  #player { position: absolute; width: 42px; height: 58px; background: #ce93d8; border-radius: 8px; border: 3px solid #f3e5f5; z-index: 10; box-shadow: 0 0 20px rgba(206, 147, 216, 0.6); }
   #player2 { position: absolute; width: 42px; height: 58px; background: #4fc3f7; border-radius: 8px; border: 3px solid #e1f5fe; z-index: 9; display: none; }
   
   #sword { position: absolute; width: 50px; height: 50px; display: none; z-index: 11; font-size: 35px; top: -5px; left: 25px; transform-origin: left center; }
-  .sword-anim { display: flex !important; animation: slash 0.2s ease-out; }
+  .sword-anim { display: flex !important; align-items: center; justify-content: center; animation: slash 0.2s ease-out; }
   @keyframes slash { 0% { transform: rotate(-60deg); } 100% { transform: rotate(60deg); } }
 
   .platform { position: absolute; background: linear-gradient(180deg, #311b92, #1a237e); border: 1px solid #7c43bd; border-radius: 4px; }
   .boss { position: absolute; width: 110px; height: 140px; border-radius: 15px; z-index: 5; border: 4px solid white; display: flex; align-items: center; justify-content: center; font-size: 40px; }
-  .projectile { position: absolute; width: 24px; height: 24px; border-radius: 50%; background: #ffeb3b; }
-
+  .projectile { position: absolute; width: 24px; height: 24px; border-radius: 50%; z-index: 9; background: #ffeb3b; }
+  
   #ui-bar { position: fixed; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; z-index: 100; pointer-events: none; }
   .ui-element { pointer-events: auto; background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 12px; border: 1px solid #7c43bd; font-weight: bold; }
 
@@ -41,8 +43,9 @@
   #knob { position: absolute; width: 70px; height: 70px; background: #7c43bd; border: 2px solid white; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); }
   .btn-group { display: flex; gap: 25px; pointer-events: auto; }
   .action-btn { width: 110px; height: 110px; border-radius: 50%; border: 4px solid rgba(255,255,255,0.4); color: white; font-size: 3rem; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); }
-  
+
   .hide { display: none !important; }
+  #lvl-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 </style>
 </head>
 <body>
@@ -55,36 +58,39 @@
   <button class="menu-btn" onclick="newGame()">NUOVO INIZIO</button>
   <button class="menu-btn" id="cont-btn" onclick="continueGame()">CONTINUA</button>
   <button class="menu-btn" onclick="showScreen('level-menu')">LIVELLI</button>
-  <button class="menu-btn" onclick="showScreen('power-1v1')" style="background: #b71c1c;">SCONTRO 1v1</button>
+  <button class="menu-btn" onclick="showScreen('online-menu')" style="background:#b71c1c">SCONTRO 1v1 ONLINE</button>
   <button class="menu-btn" onclick="showScreen('stats-menu')">PROGRESSI E DATI</button>
-  <button class="menu-btn" onclick="showScreen('settings-menu')">IMPOSTAZIONI</button>
 </div>
 
-<div id="power-1v1" class="overlay-screen hide">
-  <h1>POTENZIAMENTI 1v1</h1>
-  <div class="stats-box">
-    <div class="pow-item active" onclick="selectSkill(this, 'speed')">⚡ VELOCITÀ</div>
-    <div class="pow-item" onclick="selectSkill(this, 'shield')">🛡️ SCUDO (8 HP)</div>
-    <div class="pow-item" onclick="selectSkill(this, 'power')">🔥 SUPER FORZA</div>
-  </div>
-  <button class="menu-btn" onclick="enter1v1()">ENTRA CON CODICE</button>
+<div id="online-menu" class="overlay-screen hide">
+  <h1>ARENA 1v1</h1>
+  <div id="pow-speed" class="pow-item active" onclick="selectSkill('speed')">⚡ VELOCITÀ</div>
+  <div id="pow-shield" class="pow-item" onclick="selectSkill('shield')">🛡️ SCUDO (8 HP)</div>
+  <div id="pow-power" class="pow-item" onclick="selectSkill('power')">🔥 SUPER FORZA</div>
+  <button class="menu-btn" onclick="startOnline()" style="margin-top:20px; background:#00e676; color:black;">ENTRA IN PARTITA</button>
   <button class="menu-btn" onclick="showScreen('main-menu')">INDIETRO</button>
 </div>
 
-<div id="settings-menu" class="overlay-screen hide">...</div>
-<div id="level-menu" class="overlay-screen hide">...</div>
-<div id="stats-menu" class="overlay-screen hide">...</div>
-<div id="win-screen" class="overlay-screen hide">...</div>
-<div id="end-screen" class="overlay-screen hide">...</div>
+<div id="level-menu" class="overlay-screen hide">
+  <h1>SELEZIONA REGNO</h1>
+  <div id="lvl-grid"></div>
+  <button class="menu-btn" onclick="showScreen('main-menu')">INDIETRO</button>
+</div>
+
+<div id="stats-menu" class="overlay-screen hide">
+  <h1>PROGRESSI DATI</h1>
+  <div id="stat-lvls"></div>
+  <button class="menu-btn" onclick="showScreen('main-menu')">INDIETRO</button>
+</div>
 
 <div id="game-container">
   <div id="ui-bar">
     <div class="ui-element">HP: <span id="health-ui">♥♥♥♥♥</span></div>
-    <div class="ui-element">LVL: <span id="lvl-ui">1</span> | <span id="weapon-ui"></span></div>
-    <button class="ui-element" style="color: white; pointer-events:auto;" onclick="location.reload()">Esci</button>
+    <div class="ui-element">LVL: <span id="lvl-ui">1</span></div>
+    <button class="ui-element" onclick="location.reload()">Esci</button>
   </div>
   <div id="world">
-    <div id="player"><div id="sword">⚔️</div><div id="hitbox-vis"></div></div>
+    <div id="player"><div id="sword">⚔️</div></div>
     <div id="player2"></div>
   </div>
   <div class="controls">
@@ -97,161 +103,126 @@
 </div>
 
 <script>
-// LOGICA ONLINE SOCKET
-const socket = (typeof io !== 'undefined') ? io() : null;
-let roomCode = "";
-let is1v1 = false;
-let opX = 0, opY = 0, opDir = 1;
-let activeSkill = 'speed';
+let socket = (typeof io !== 'undefined') ? io() : null;
+let state = 'MENU', currentLevel = 1, unlockedLevel = 1, is1v1 = false;
+let px, py, vx=0, vy=0, health, maxHealth=5, moveDir=0, onGround=false;
+let activeSkill = 'speed', roomCode = "";
+let opX = 0, opY = 0;
 
-let state = 'MENU', currentLevel = 1, unlockedLevel = 1, difficulty = 1;
-let px, py, vx, vy, health, maxHealth = 5, stats = { deaths: 0, bossKills: 0 };
-let onGround = false, moveDir = 0, scrollX = 0, holdingJump = false, isAttacking = false;
-let projectiles = [], bosses = [], fountain = null;
-
-function selectSkill(el, skill) {
-    activeSkill = skill;
-    document.querySelectorAll('.pow-item').forEach(i => i.classList.remove('active'));
-    el.classList.add('active');
+// GESTIONE POTENZIAMENTI CLICCABILI
+function selectSkill(skill) {
+  activeSkill = skill;
+  document.querySelectorAll('.pow-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('pow-' + skill).classList.add('active');
 }
 
-function enter1v1() {
-    let code = prompt("Inserisci codice stanza:");
-    if(code) {
-        roomCode = code;
-        is1v1 = true;
-        socket.emit('joinRoom', roomCode);
-        startPlaying();
-    }
+function startOnline() {
+  roomCode = prompt("Inserisci codice stanza:");
+  if(!roomCode) return;
+  is1v1 = true;
+  if(socket) socket.emit('joinRoom', roomCode);
+  startPlaying();
 }
 
+// LOGICA AVVIO PARTITA (Sia Single che 1v1)
 function startPlaying() {
-  state = 'PLAYING'; px = 300; py = 200; 
-  vx = 0; vy = 0; projectiles = [];
+  state = 'PLAYING';
+  px = 150; py = 300; vx = 0; vy = 0;
   
-  if(is1v1) {
-    maxHealth = (activeSkill === 'shield') ? 8 : 5;
-    document.getElementById('player2').style.display = 'block';
-    document.getElementById('weapon-ui').innerText = "1v1 ARENA";
-  } else {
-    maxHealth = 5;
-    document.getElementById('player2').style.display = 'none';
-  }
-  
+  maxHealth = (is1v1 && activeSkill === 'shield') ? 8 : 5;
   health = maxHealth;
-  updateHeartsUI();
-  showScreen('none'); 
+  
+  document.getElementById('health-ui').innerText = '♥'.repeat(health);
+  document.getElementById('player2').style.display = is1v1 ? 'block' : 'none';
   document.getElementById('game-container').style.display = 'block';
+  showScreen('none');
+  
   loadLevel(currentLevel);
 }
 
 function loadLevel(n) {
   const world = document.getElementById('world');
-  world.querySelectorAll('.platform, .boss, .projectile, #flag, .fountain').forEach(e => e.remove());
+  world.querySelectorAll('.platform, .boss').forEach(e => e.remove());
   
   if(is1v1) {
-    // Piattaforma Unica 1v1
-    const p = { w: 1200, h: 60, l: 0, t: window.innerHeight - 150 };
     const d = document.createElement('div'); d.className = 'platform';
-    d.style.width = p.w + 'px'; d.style.height = p.h + 'px'; d.style.left = p.l + 'px'; d.style.top = p.t + 'px';
+    d.style.cssText = `width:1200px; height:60px; left:0; top:${window.innerHeight-100}px;`;
     world.appendChild(d);
   } else {
-    // Caricamento originale dei livelli single player...
-    // (Mantieni qui la tua logica originale delle piattaforme del tuo codice)
+    // Qui ricarica le tue piattaforme originali
+    const d = document.createElement('div'); d.className = 'platform';
+    d.style.cssText = `width:2000px; height:100px; left:0; top:${window.innerHeight-100}px;`;
+    world.appendChild(d);
   }
 }
 
 function attack() {
-  if(isAttacking) return;
-  isAttacking = true;
-  const s = document.getElementById('sword');
-  const hb = document.getElementById('hitbox-vis');
-  s.classList.add('sword-anim');
-  
-  // Hitbox attiva
-  hb.style.display = 'block';
-  hb.style.width = '100px'; hb.style.height = '60px';
-  let face = (moveDir >= 0) ? 1 : -1;
-  hb.style.left = (face === 1) ? '30px' : '-90px';
-
-  if(is1v1) {
-    let hitX = (face === 1) ? px + 30 : px - 90;
-    if(hitX < opX + 42 && hitX + 100 > opX && py < opY + 58 && py + 60 > opY) {
-        let dmg = (activeSkill === 'power') ? 2 : 1;
-        socket.emit('damage', { room: roomCode, amount: dmg });
-    }
-  } else {
-    // Danno originale ai Boss...
+  document.getElementById('sword').classList.add('sword-anim');
+  if(is1v1 && socket) {
+      let face = (vx >= 0) ? 1 : -1;
+      let dmg = (activeSkill === 'power') ? 2 : 1;
+      socket.emit('attack', { room: roomCode, dmg: dmg });
   }
-
-  setTimeout(() => { s.classList.remove('sword-anim'); hb.style.display = 'none'; isAttacking = false; }, 200);
+  setTimeout(() => document.getElementById('sword').classList.remove('sword-anim'), 200);
 }
 
 function update() {
   if (state === 'PLAYING') {
-    let speedMult = (activeSkill === 'speed') ? 1.5 : 1.0;
-    vx += moveDir * 1.0 * speedMult; vx *= 0.85;
-    vy += 0.8; px += vx; py += vy;
+    let speed = (is1v1 && activeSkill === 'speed') ? 1.5 : 1.0;
+    vx += moveDir * speed; vx *= 0.85; vy += 0.8;
+    px += vx; py += vy;
 
-    // Collisione semplice Arena
     onGround = false;
     document.querySelectorAll('.platform').forEach(pl => {
-      const pT = pl.offsetTop, pL = pl.offsetLeft, pW = pl.offsetWidth;
-      if (vy >= 0 && px + 35 > pL && px < pL + pW && py + 58 >= pT && py + 58 <= pT + 30) {
-        py = pT - 58; vy = 0; onGround = true;
+      if (vy >= 0 && px + 35 > pl.offsetLeft && px < pl.offsetLeft + pl.offsetWidth && py + 58 >= pl.offsetTop && py + 58 <= pl.offsetTop + 30) {
+        py = pl.offsetTop - 58; vy = 0; onGround = true;
       }
     });
 
     if(is1v1 && socket) {
-        socket.emit('sync', { room: roomCode, x: px, y: py, dir: (moveDir >= 0 ? 1 : -1) });
+      socket.emit('sync', { room: roomCode, x: px, y: py });
     }
 
-    // Camera e Rendering
-    scrollX = is1v1 ? 0 : Math.max(-14000, Math.min(0, -px + (window.innerWidth / 2)));
-    document.getElementById('world').style.transform = `translateX(${scrollX}px)`;
-    const pEl = document.getElementById('player');
-    pEl.style.left = px + 'px'; pEl.style.top = py + 'px';
-    pEl.style.transform = (moveDir >= 0) ? 'scaleX(1)' : 'scaleX(-1)';
+    document.getElementById('player').style.left = px + 'px';
+    document.getElementById('player').style.top = py + 'px';
+    document.getElementById('player').style.transform = vx >= 0 ? 'scaleX(1)' : 'scaleX(-1)';
   }
   requestAnimationFrame(update);
 }
 
-// SOCKET RECEIVE
+// RICEZIONE DATI ONLINE
 if(socket) {
-    socket.on('playerUpdate', (data) => {
-        opX = data.x; opY = data.y; opDir = data.dir;
-        const p2 = document.getElementById('player2');
-        p2.style.left = opX + 'px'; p2.style.top = opY + 'px';
-        p2.style.transform = opDir === 1 ? 'scaleX(1)' : 'scaleX(-1)';
-    });
-    socket.on('takeDamage', (amount) => {
-        health -= amount;
-        updateHeartsUI();
-        if(health <= 0) { alert("SCONFITTO!"); location.reload(); }
-    });
+  socket.on('updatePos', (data) => {
+    document.getElementById('player2').style.left = data.x + 'px';
+    document.getElementById('player2').style.top = data.y + 'px';
+  });
+  socket.on('hit', (dmg) => {
+    health -= dmg;
+    document.getElementById('health-ui').innerText = '♥'.repeat(Math.max(0, health));
+    if(health <= 0) location.reload();
+  });
 }
 
-function updateHeartsUI() {
-    document.getElementById('health-ui').innerText = '♥'.repeat(Math.max(0, health)) + '♡'.repeat(Math.max(0, maxHealth - health));
-}
-
-// Re-importa i tuoi controlli joystick e action-btn qui...
-// (Il resto del tuo script originale rimane invariato sotto)
-
+// FUNZIONI MENU ORIGINALI (Sistemate per funzionare)
+function newGame() { is1v1 = false; startPlaying(); }
+function continueGame() { is1v1 = false; startPlaying(); }
 function showScreen(id) {
   document.querySelectorAll('.overlay-screen').forEach(s => s.classList.add('hide'));
   if(id !== 'none') document.getElementById(id).classList.remove('hide');
 }
 
-// Inizializzazione controlli (dal tuo codice)
-document.getElementById('btnJmp').addEventListener('touchstart', (e) => { e.preventDefault(); if(onGround) vy = -16; holdingJump = true; });
-document.getElementById('btnJmp').addEventListener('touchend', () => { holdingJump = false; });
-document.getElementById('btnAtk').addEventListener('touchstart', (e) => { e.preventDefault(); attack(); });
-
-// Joystick logica (dal tuo codice)
-joyArea.addEventListener('touchstart', updateJoystick); // Mantieni la tua funzione updateJoystick
-joyArea.addEventListener('touchmove', updateJoystick);
+// CONTROLLI (Joystick originale)
+const joyArea = document.getElementById('joyArea'), knob = document.getElementById('knob');
+joyArea.addEventListener('touchstart', (e) => {
+  const rect = joyArea.getBoundingClientRect();
+  const dist = e.touches[0].clientX - (rect.left + rect.width/2);
+  moveDir = dist > 0 ? 1 : -1;
+  knob.style.left = dist > 0 ? '70%' : '30%';
+});
 joyArea.addEventListener('touchend', () => { moveDir = 0; knob.style.left = '50%'; });
+
+document.getElementById('btnJmp').addEventListener('touchstart', () => { if(onGround) vy = -16; });
+document.getElementById('btnAtk').addEventListener('touchstart', attack);
 
 update();
 </script>
