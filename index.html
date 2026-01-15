@@ -139,6 +139,7 @@
 <script>
 const socket = (typeof io !== 'undefined') ? io() : null;
 let is1v1 = false, roomCode = "", activeSkill = 'speed', opX = 0, opY = 0;
+const GROUND_COORD = 450; // COSTANTE FISSA PER IL TERRENO
 
 function selectSkill(s) {
     activeSkill = s;
@@ -272,14 +273,14 @@ function update() {
 
     onGround = false;
     document.querySelectorAll('.platform').forEach(pl => {
-      const pT = pl.offsetTop, pL = pl.offsetLeft, pR = pL + pl.offsetWidth;
+      const pT = parseInt(pl.style.top), pL = parseInt(pl.style.left), pR = pL + parseInt(pl.style.width);
       if (vy >= 0 && px + 35 > pL && px < pR && py + 58 >= pT && py + 58 <= pT + 30) { 
         py = pT - 58; vy = 0; onGround = true; 
       }
     });
 
-    if(py > window.innerHeight + 100) { 
-        if(is1v1) { px=300; py=100; health--; } 
+    if(py > 1000) { 
+        if(is1v1) { px=300; py=GROUND_COORD-60; health--; } 
         else { state = 'END'; stats.deaths++; saveData(); showScreen('end-screen'); }
     }
     
@@ -304,7 +305,7 @@ function update() {
         bosses.forEach(b => {
           if(b.hp > 0 && Math.abs(px - b.x) < 900 && Date.now() - b.lastShot > baseRate) {
               const bossEl = document.getElementById(b.id);
-              const bY = bossEl.offsetTop + 50;
+              const bY = parseInt(bossEl.style.top) + 50;
               const angle = Math.atan2(py - bY, px - b.x);
               if(b.type === 'triple') for(let off=-0.3; off<=0.3; off+=0.3) spawnProjectile(b.x, bY, Math.cos(angle+off)*baseSpeed, Math.sin(angle+off)*baseSpeed, "🔥");
               else if(b.type === 'rain') for(let i=0; i<3; i++) spawnProjectile(px-200+(Math.random()*400), 0, 0, baseSpeed, "☄️");
@@ -383,9 +384,8 @@ function showScreen(id) {
 
 function startPlaying() {
   state = 'PLAYING'; 
-  const groundY = window.innerHeight - 100;
   px = 150; 
-  py = groundY - 60; // Posiziona SOPRA il terreno
+  py = GROUND_COORD - 60; // SPAWN FISSO SOPRA TERRENO
   vx = 0; vy = 0; projectiles = [];
   
   document.getElementById('sword').classList.remove('sword-anim');
@@ -414,16 +414,14 @@ function startPlaying() {
 function loadLevel(n) {
   const world = document.getElementById('world');
   world.querySelectorAll('.platform, .boss, .projectile, #flag, .fountain').forEach(e => e.remove());
-  const screenH = window.innerHeight;
-  const groundY = screenH - 100;
 
   if(is1v1) {
       const d = document.createElement('div'); d.className = 'platform';
-      d.style.width = '3000px'; d.style.height = '200px'; d.style.left = '0px'; d.style.top = groundY + 'px';
+      d.style.width = '5000px'; d.style.height = '300px'; d.style.left = '0px'; d.style.top = GROUND_COORD + 'px';
       world.appendChild(d);
   } else {
-      const plats = [{w:800, h:100, l:0, t:groundY}, {w:1000, h:100, l:2700, t:groundY}, {w:1000, h:100, l:5300, t:groundY}, {w:1500, h:100, l:7800, t:groundY}];
-      for(let j=0; j<20; j++) plats.push({ w: 250, h: 35, l: 850 + (j * 450), t: (groundY - 150) + (Math.sin(j) * 80) });
+      const plats = [{w:800, h:100, l:0, t:GROUND_COORD}, {w:1000, h:100, l:2700, t:GROUND_COORD}, {w:1000, h:100, l:5300, t:GROUND_COORD}, {w:1500, h:100, l:7800, t:GROUND_COORD}];
+      for(let j=0; j<20; j++) plats.push({ w: 250, h: 35, l: 850 + (j * 450), t: (GROUND_COORD - 150) + (Math.sin(j) * 80) });
       plats.forEach(p => {
         const d = document.createElement('div'); d.className = 'platform';
         d.style.width = p.w + 'px'; d.style.height = p.h + 'px'; d.style.left = p.l + 'px'; d.style.top = p.t + 'px';
@@ -432,15 +430,15 @@ function loadLevel(n) {
       const config = levelConfigs[n];
       bosses = config.bosses.map(b => {
         const d = document.createElement('div'); d.id = b.id; d.className = 'boss';
-        d.style.left = b.x + 'px'; d.style.top = (groundY - 140) + 'px'; 
+        d.style.left = b.x + 'px'; d.style.top = (GROUND_COORD - 140) + 'px'; 
         d.style.borderColor = config.bColor; d.innerHTML = (n === 10 ? '👑' : '👾');
         world.appendChild(d); return {...b, lastShot: 0};
       });
       const fEl = document.createElement('div'); fEl.className = 'fountain'; fEl.innerHTML = "⛲";
-      fEl.style.left = "4500px"; fEl.style.top = (groundY - 100) + "px";
-      world.appendChild(fEl); fountain = { el: fEl, x: 4500, y: groundY-100 };
+      fEl.style.left = "4500px"; fEl.style.top = (GROUND_COORD - 100) + "px";
+      world.appendChild(fEl); fountain = { el: fEl, x: 4500, y: GROUND_COORD-100 };
       const flag = document.createElement('div'); flag.id = 'flag'; flag.style.position = 'absolute'; 
-      flag.style.left = '9200px'; flag.style.top = (groundY - 80) + 'px'; flag.fontSize = '70px'; flag.innerHTML = '🚩';
+      flag.style.left = '9200px'; flag.style.top = (GROUND_COORD - 80) + 'px'; flag.style.fontSize = '70px'; flag.innerHTML = '🚩';
       world.appendChild(flag);
   }
 }
@@ -458,4 +456,3 @@ loadData(); update();
 </script>
 </body>
 </html>
-
