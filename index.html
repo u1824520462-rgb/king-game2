@@ -63,8 +63,8 @@
 <div id="main-menu" class="overlay-screen">
   <h1>KING</h1>
   <p class="subtitle">FINAL SYMBOLS</p>
-  <button class="menu-btn" onclick="newGame()">NUOVO INIZIO</button>
-  <button class="menu-btn" id="cont-btn" onclick="continueGame()">CONTINUA</button>
+  <button class="menu-btn" onclick="requestFullscreen(); newGame()">NUOVO INIZIO</button>
+  <button class="menu-btn" id="cont-btn" onclick="requestFullscreen(); continueGame()">CONTINUA</button>
   <button class="menu-btn" onclick="showScreen('level-menu')">LIVELLI</button>
   <button class="menu-btn" onclick="showScreen('online-setup')" style="background:#b71c1c">SCONTRO 1v1 ONLINE</button>
   <button class="menu-btn" onclick="showScreen('stats-menu')">PROGRESSI E DATI</button>
@@ -76,7 +76,7 @@
   <div id="pow-speed" class="pow-item active" onclick="selectSkill('speed')">⚡ VELOCITÀ</div>
   <div id="pow-shield" class="pow-item" onclick="selectSkill('shield')">🛡️ SCUDO (8 HP)</div>
   <div id="pow-power" class="pow-item" onclick="selectSkill('power')">🔥 SUPER FORZA</div>
-  <button class="menu-btn" onclick="join1v1()" style="margin-top:20px; background:#00e676; color:black;">ENTRA NELLA STANZA</button>
+  <button class="menu-btn" onclick="requestFullscreen(); join1v1()" style="margin-top:20px; background:#00e676; color:black;">ENTRA NELLA STANZA</button>
   <button class="menu-btn" onclick="showScreen('main-menu')">INDIETRO</button>
 </div>
 
@@ -139,7 +139,15 @@
 <script>
 const socket = (typeof io !== 'undefined') ? io() : null;
 let is1v1 = false, roomCode = "", activeSkill = 'speed', opX = 0, opY = 0;
-const GROUND_COORD = 450; // COSTANTE FISSA PER IL TERRENO
+const GROUND_COORD = 450; 
+
+// FUNZIONE SCHERMO INTERO
+function requestFullscreen() {
+    const elem = document.documentElement;
+    if (elem.requestFullscreen) { elem.requestFullscreen(); }
+    else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); }
+    else if (elem.msRequestFullscreen) { elem.msRequestFullscreen(); }
+}
 
 function selectSkill(s) {
     activeSkill = s;
@@ -264,7 +272,8 @@ function attack() {
 function update() {
   updateGamepad();
   if (state === 'PLAYING') {
-    let speedMult = (is1v1 && activeSkill === 'speed') ? 1.6 : 1.0;
+    // VELOCITÀ AUMENTATA: Moltiplicatore base aumentato a 1.8 invece di 1.0
+    let speedMult = (is1v1 && activeSkill === 'speed') ? 2.2 : 1.8; 
     vx += moveDir * 1.0 * speedMult; vx *= 0.85;
     let curGrav = (vy < 0 && holdingJump) ? 0.35 : 0.8;
     vy += curGrav; px += vx; py += vy;
@@ -373,7 +382,7 @@ function updateUIStats() {
   const grid = document.getElementById('lvl-grid'); grid.innerHTML = '';
   for(let i=1; i<=10; i++) {
     const b = document.createElement('button'); b.className = 'menu-btn'; b.style.width = '130px'; b.innerText = "REGNO " + i;
-    b.disabled = i > unlockedLevel; b.onclick = () => { is1v1 = false; currentLevel = i; startPlaying(); }; grid.appendChild(b);
+    b.disabled = i > unlockedLevel; b.onclick = () => { requestFullscreen(); is1v1 = false; currentLevel = i; startPlaying(); }; grid.appendChild(b);
   }
 }
 
@@ -385,7 +394,7 @@ function showScreen(id) {
 function startPlaying() {
   state = 'PLAYING'; 
   px = 150; 
-  py = GROUND_COORD - 60; // SPAWN FISSO SOPRA TERRENO
+  py = GROUND_COORD - 60; 
   vx = 0; vy = 0; projectiles = [];
   
   document.getElementById('sword').classList.remove('sword-anim');
